@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/packages/x_storage_core/melos_x_storage_core.iml" filepath="$PROJECT_DIR$/packages/x_storage_core/melos_x_storage_core.iml" />
+      <module fileurl="file://$PROJECT_DIR$/packages/x_storage_firebase/melos_x_storage_firebase.iml" filepath="$PROJECT_DIR$/packages/x_storage_firebase/melos_x_storage_firebase.iml" />
+      <module fileurl="file://$PROJECT_DIR$/packages/x_storage_flutter/melos_x_storage_flutter.iml" filepath="$PROJECT_DIR$/packages/x_storage_flutter/melos_x_storage_flutter.iml" />
+      <module fileurl="file://$PROJECT_DIR$/packages/x_storage_presigned_url/melos_x_storage_presigned_url.iml" filepath="$PROJECT_DIR$/packages/x_storage_presigned_url/melos_x_storage_presigned_url.iml" />
+      <module fileurl="file://$PROJECT_DIR$/melos_x_storage.iml" filepath="$PROJECT_DIR$/melos_x_storage.iml" />
+    </modules>
+  </component>
+</project>

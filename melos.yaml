@@ -1,0 +1,130 @@
+name: x_storage
+repository: https://github.com/yourusername/x_storage
+
+packages:
+  - packages/**
+
+sdkPath: .fvm/flutter_sdk
+
+scripts:
+  # コードの解析
+  analyze:
+    run: |
+      melos exec -c 1 -- \
+        dart analyze . --fatal-infos
+    description: Run `dart analyze` in all packages
+
+  clean:
+    name: clean
+    exec: fvm flutter clean && fvm flutter pub get
+
+  repair:
+    name: repair
+    exec: fvm flutter pub cache repair
+
+  fix_dry-run:
+    name: fix dry-run
+    exec: dart fix --dry-run .
+
+  fix_apply:
+    name: fix apply
+    exec: dart fix --apply .
+
+  pub_upgrade_major:
+    name: pub_upgrade_major
+    exec: fvm flutter pub upgrade --major-versions
+
+  # パッケージの更新
+  pub_get:
+    name: pub_get
+    exec: fvm flutter pub get
+
+  pub_upgrade:
+    name: pub_upgrade
+    exec: fvm flutter pub upgrade
+
+  # コード生成
+  build_runner:
+    run: |
+      melos exec -c 1 -- \
+        flutter pub run build_runner build --delete-conflicting-outputs
+    description: Run build_runner in all packages
+
+  image_gen:
+    name: image_gen
+    exec: fluttergen -c pubspec.yaml
+
+  l10n_gen:
+    name: l10n_gen
+    exec: fvm flutter gen-l10n
+    packageFilters:
+      scope: sunlightcity_app
+
+  icon_gen:
+    name: icon_gen
+    exec: fvm flutter pub run flutter_launcher_icons:main
+    packageFilters:
+      scope: sunlightcity_app
+
+  open_xcode:
+    name: open_xcode
+    exec: open ios/Runner.xcworkspace
+    packageFilters:
+      scope: sunlightcity_app
+
+  # 開発環境のビルド
+  build_app_ios_dev:
+    name: build_app_ios_dev
+    exec: fvm flutter build ipa --no-tree-shake-icons --release --dart-define-from-file=dart_defines/dev.json  && open build/ios/archive/Runner.xcarchive
+    packageFilters:
+      scope: sunlightcity_app
+
+  build_app_android_dev:
+    name: build_app_android_dev
+    exec: fvm flutter build apk --release --dart-define-from-file=dart_defines/dev.json && open build/app/outputs/flutter-apk
+    packageFilters:
+      scope: sunlightcity_app
+
+  build_admin_web_dev:
+    name: build_admin_web_dev
+    exec: fvm flutter build web --dart-define-from-file=dart_defines/dev.json && firebase use dev &&  firebase deploy --only hosting
+    packageFilters:
+      scope: sunlightcity_admin
+
+  deploy_functions_dev:
+    name: deploy_functions_dev
+    exec: firebase use dev && firebase deploy --only functions
+    packageFilters:
+      scope: sunlightcity_firebase
+
+  # ステージング環境のビルド
+  build_app_ios_stg:
+    name: build_app_ios_stg
+    exec: fvm flutter build ipa --release --dart-define-from-file=dart_defines/stg.json && open build/ios/archive/Runner.xcarchive
+    packageFilters:
+      scope: sunlightcity_app
+
+  build_app_android_stg:
+    name: build_app_android_stg
+    exec: fvm flutter build apk --release --dart-define-from-file=dart_defines/stg.json && open build/app/outputs/flutter-apk
+    packageFilters:
+      scope: sunlightcity_app
+
+  # 本番環境のビルド
+  build_app_ios_prod:
+    name: build_app_ios_prod
+    exec: fvm flutter build ipa --release --dart-define-from-file=dart_defines/prod.json && open build/ios/archive/Runner.xcarchive
+    packageFilters:
+      scope: sunlightcity_app
+
+  build_app_android_prod:
+    name: build_app_android_prod
+    exec: fvm flutter build apk --release --dart-define-from-file=dart_defines/prod.json && open build/app/outputs/flutter-apk
+    packageFilters:
+      scope: sunlightcity_app
+
+  build_admin_web_prod:
+    name: build_admin_web_prod
+    exec: fvm flutter build web --dart-define-from-file=dart_defines/prod.json
+    packageFilters:
+      scope: sunlightcity_admin
