@@ -3,7 +3,7 @@ import 'package:x_storage_core/x_storage_core.dart';
 import 'package:flutter/foundation.dart';
 
 /// A simple service example that plays audio only through network storage
-/// (using NetworkXStorageMixin)
+/// (using NetworkProviderMixin)
 ///
 /// This service demonstrates basic audio playback functionality for
 /// network-based storage drivers.
@@ -19,13 +19,13 @@ class XStorageAudioService {
   /// Plays audio from the specified URI
   ///
   /// Throws an exception if the storage driver doesn't support network access
-  /// (i.e., doesn't implement NetworkXStorageMixin)
-  Future<void> play(XStorageUri uri) async {
+  /// (i.e., doesn't implement NetworkProviderMixin)
+  Future<void> play(XUri uri) async {
     await stop();
-    final driver = _xStorage.getDriver(uri);
+    final driver = _xStorage.getProvider(uri);
 
     // Example: Only support network-based storage
-    if (driver is! NetworkXStorageMixin) {
+    if (driver is! NetworkProviderMixin) {
       throw Exception('Unsupported storage driver for audio playback');
     }
 

@@ -8,7 +8,7 @@ import 'package:x_storage_core/x_storage_core.dart';
 /// based on your specific use case.
 class XStorageImage extends StatefulWidget {
   /// The URI of the image in XStorage
-  final XStorageUri uri;
+  final XUri uri;
 
   /// The XStorage instance to use for loading the image
   final XStorage xStorage;
@@ -61,13 +61,13 @@ class _XStorageImageState extends State<XStorageImage> {
     switch (storageType) {
       case XStorageType.asset:
         final driver =
-            widget.xStorage.getDriver(widget.uri) as AssetXStorageMixin;
+            widget.xStorage.getProvider(widget.uri) as AssetProviderMixin;
         assetPath = driver.assetName(widget.uri);
         break;
 
       case XStorageType.network:
         final driver =
-            widget.xStorage.getDriver(widget.uri) as NetworkXStorageMixin;
+            widget.xStorage.getProvider(widget.uri) as NetworkProviderMixin;
         networkUri = await driver.getNetworkUrl(widget.uri);
         break;
 

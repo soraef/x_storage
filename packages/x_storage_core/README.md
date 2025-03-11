@@ -17,8 +17,8 @@ XStorage is a Flutter package that provides a unified interface for handling dif
 
 ## Features
 
-- Unified storage interface (`XStorageDriver`)
-- Base implementations for various storage drivers
+- Unified storage interface (`XStorageProvider`)
+- Base implementations for various storage providers
 - Basic file operations (read, write, delete, existence check)
 - URI-based file management
 
@@ -39,8 +39,8 @@ import 'package:x_storage_core/x_storage_core.dart';
 // Create XStorage instance
 final storage = XStorage();
 
-// Register a driver (example: custom driver)
-class MyStorageDriver extends XStorageDriver with NetworkXStorageMixin {
+// Register a provider (example: custom provider)
+class MyStorageProvider extends XStorageProvider with NetworkProviderMixin {
   @override
   String get scheme => 'my_storage';
 
@@ -50,32 +50,32 @@ class MyStorageDriver extends XStorageDriver with NetworkXStorageMixin {
   // Implement other methods...
 }
 
-// Register the driver
-storage.registerDriver(MyStorageDriver());
+// Register the provider
+storage.registerProvider(MyStorageProvider());
 
 // Save a file
 await storage.saveFile(
-  XStorageUri.create('my_storage', 'path/to/file.txt'),
+  XUri.create('my_storage', 'path/to/file.txt'),
   Uint8List.fromList([/* data */]),
 );
 
 // Load a file
 final data = await storage.loadFile(
-  XStorageUri.create('my_storage', 'path/to/file.txt'),
+  XUri.create('my_storage', 'path/to/file.txt'),
 );
 
 // Delete a file
 await storage.deleteFile(
-  XStorageUri.create('my_storage', 'path/to/file.txt'),
+  XUri.create('my_storage', 'path/to/file.txt'),
 );
 ```
 
-## Creating Custom Drivers
+## Creating Custom Providers
 
-To create a driver for a new storage service, extend `XStorageDriver` and implement the required methods:
+To create a provider for a new storage service, extend `XStorageProvider` and implement the required methods:
 
 ```dart
-class CustomStorageDriver extends XStorageDriver with NetworkXStorageMixin {
+class CustomStorageProvider extends XStorageProvider with NetworkProviderMixin {
   @override
   String get scheme => 'custom';
 
@@ -83,17 +83,17 @@ class CustomStorageDriver extends XStorageDriver with NetworkXStorageMixin {
   String get rootUrl => 'https://custom-storage.example.com';
 
   @override
-  Future<void> saveFile(XStorageUri uri, Uint8List data) async {
+  Future<void> saveFile(XUri uri, Uint8List data) async {
     // Implementation...
   }
 
   @override
-  Future<Uint8List?> loadFile(XStorageUri uri) async {
+  Future<Uint8List?> loadFile(XUri uri) async {
     // Implementation...
   }
 
   @override
-  Future<void> deleteFile(XStorageUri uri) async {
+  Future<void> deleteFile(XUri uri) async {
     // Implementation...
   }
 }
@@ -101,9 +101,9 @@ class CustomStorageDriver extends XStorageDriver with NetworkXStorageMixin {
 
 ## Available Mixins
 
-- `NetworkXStorageMixin`: For network-based storage
-- `FileXStorageMixin`: For file system-based storage
-- `AssetXStorageMixin`: For Flutter assets
+- `NetworkProviderMixin`: For network-based storage
+- `FileProviderMixin`: For file system-based storage
+- `AssetProviderMixin`: For Flutter assets
 
 ## License
 

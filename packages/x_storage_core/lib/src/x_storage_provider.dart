@@ -1,53 +1,53 @@
 import 'dart:typed_data';
 import 'x_storage_type.dart';
-import 'x_storage_uri.dart';
+import 'x_uri.dart';
 
-/// Abstract base class for storage drivers
+/// Abstract base class for storage providers
 ///
-/// This class defines the interface that all storage drivers must implement.
-/// Each driver represents a specific storage type (e.g., asset, file, network)
+/// This class defines the interface that all storage providers must implement.
+/// Each provider represents a specific storage type (e.g., asset, file, network)
 /// and provides implementations for basic file operations.
-abstract class XStorageDriver {
-  /// The scheme for this driver (e.g., "asset", "file", "firebase", "s3")
+abstract class XStorageProvider {
+  /// The scheme for this provider (e.g., "asset", "file", "firebase", "s3")
   ///
-  /// This scheme is used to identify which driver should handle a specific URI.
+  /// This scheme is used to identify which provider should handle a specific URI.
   String get scheme;
 
   /// Saves data to the specified URI
-  Future<void> saveFile(XStorageUri uri, Uint8List data);
+  Future<void> saveFile(XUri uri, Uint8List data);
 
   /// Loads data from the specified URI
   ///
   /// Returns null if the file doesn't exist.
-  Future<Uint8List?> loadFile(XStorageUri uri);
+  Future<Uint8List?> loadFile(XUri uri);
 
   /// Deletes the file at the specified URI
-  Future<void> deleteFile(XStorageUri uri);
+  Future<void> deleteFile(XUri uri);
 
   /// Checks if a file exists at the specified URI
   ///
   /// Default implementation checks if [loadFile] returns non-null data.
-  Future<bool> exists(XStorageUri uri) async {
+  Future<bool> exists(XUri uri) async {
     return await loadFile(uri).then((value) => value != null);
   }
 
-  /// Gets the storage type for this driver
+  /// Gets the storage type for this provider
   XStorageType get storageType;
 
-  /// Helper method to create a URI for this driver
+  /// Helper method to create a URI for this provider
   ///
-  /// Creates a [XStorageUri] using this driver's scheme and the provided path.
-  XStorageUri getUri(String path) {
-    return XStorageUri.create(scheme, path);
+  /// Creates a [XUri] using this provider's scheme and the provided path.
+  XUri getUri(String path) {
+    return XUri.create(scheme, path);
   }
 }
 
-/// Mixin for asset-based storage drivers
+/// Mixin for asset-based storage providers
 ///
 /// Provides common functionality for handling asset storage.
-mixin AssetXStorageMixin on XStorageDriver {
+mixin AssetProviderMixin on XStorageProvider {
   /// Converts a URI to an asset name
-  String assetName(XStorageUri uri) {
+  String assetName(XUri uri) {
     return uri.path;
   }
 
@@ -55,11 +55,11 @@ mixin AssetXStorageMixin on XStorageDriver {
   XStorageType get storageType => XStorageType.asset;
 }
 
-/// Mixin for network-based storage drivers
+/// Mixin for network-based storage providers
 ///
 /// Provides common functionality for handling network storage,
 /// including URL generation and type identification.
-mixin NetworkXStorageMixin on XStorageDriver {
+mixin NetworkProviderMixin on XStorageProvider {
   /// The root URL for the storage service (e.g., "https://example.com")
   String get rootUrl;
 
@@ -67,7 +67,7 @@ mixin NetworkXStorageMixin on XStorageDriver {
   ///
   /// Combines the [rootUrl] with the URI path to create a complete network URL.
   /// Handles trailing slashes in the root URL appropriately.
-  Future<Uri> getNetworkUrl(XStorageUri uri) async {
+  Future<Uri> getNetworkUrl(XUri uri) async {
     final root = rootUrl.endsWith("/")
         ? rootUrl.substring(0, rootUrl.length - 1)
         : rootUrl;
@@ -78,12 +78,12 @@ mixin NetworkXStorageMixin on XStorageDriver {
   XStorageType get storageType => XStorageType.network;
 }
 
-/// Mixin for file system-based storage drivers
+/// Mixin for file system-based storage providers
 ///
 /// Provides common functionality for handling file system storage.
-mixin FileXStorageMixin on XStorageDriver {
+mixin FileProviderMixin on XStorageProvider {
   @override
   XStorageType get storageType => XStorageType.file;
 
-  Future<String> getFilePath(XStorageUri uri);
+  Future<String> getFilePath(XUri uri);
 }

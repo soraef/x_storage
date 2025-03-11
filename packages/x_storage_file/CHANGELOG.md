@@ -1,12 +1,22 @@
-## 0.0.1
+## 0.1.0
 
-* Initial release
+* **BREAKING CHANGE**: Renamed `FileXStorageDriver` to `FileStorageProvider` for better semantic clarity
+* Updated to use x_storage_core 0.1.0
+* Improved documentation
 
-## 0.0.2
+## 0.0.4
 
-* Fix export
+* Fix bugs
 
 ## 0.0.3
 
-* Fix downloadFile
+* Fix bugs
+
+## 0.0.2
+
+* Fix bugs
+
+## 0.0.1
+
+* Initial release
 

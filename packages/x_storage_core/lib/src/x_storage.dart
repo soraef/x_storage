@@ -4,114 +4,115 @@ import 'dart:typed_data';
 
 import 'package:cross_file/cross_file.dart';
 
-import 'x_storage_driver.dart';
+import 'x_storage_provider.dart';
 import 'x_storage_type.dart';
-import 'x_storage_uri.dart';
+import 'x_uri.dart';
 
 /// The main XStorage class
 ///
-/// This class manages multiple [XStorageDriver] instances registered by scheme,
+/// This class manages multiple [XStorageProvider] instances registered by scheme,
 /// providing a unified interface to handle different storage types.
 ///
 /// Example:
 /// ```dart
 /// final storage = XStorage();
-/// storage.registerDriver(MyCustomDriver());
+/// storage.registerProvider(MyCustomDriver());
 ///
 /// // Save a file
 /// await storage.saveFile(
-///   XStorageUri.create('custom', 'path/to/file.txt'),
+///   XUri.create('custom', 'path/to/file.txt'),
 ///   data,
 /// );
 /// ```
 class XStorage {
-  final Map<String, XStorageDriver> _drivers = {};
+  final Map<String, XStorageProvider> _providers = {};
 
-  /// Registers a storage driver
+  /// Registers a storage provider
   ///
-  /// The driver will be registered with its [XStorageDriver.scheme] and can be
+  /// The provider will be registered with its [XStorageProvider.scheme] and can be
   /// used to handle storage operations for that scheme.
-  void registerDriver(XStorageDriver driver) {
-    _drivers[driver.scheme] = driver;
+  void registerProvider(XStorageProvider provider) {
+    _providers[provider.scheme] = provider;
   }
 
-  D getDriverFromScheme<D extends XStorageDriver>(String scheme) {
-    final driver = _drivers[scheme];
-    if (driver == null) {
+  D getProviderFromScheme<D extends XStorageProvider>(String scheme) {
+    final provider = _providers[scheme];
+    if (provider == null) {
       throw UnsupportedError('Unknown storage scheme in URI: $scheme');
     }
-    if (driver is! D) {
-      throw UnsupportedError('Unsupported driver type: ${driver.runtimeType}');
+    if (provider is! D) {
+      throw UnsupportedError(
+          'Unsupported provider type: ${provider.runtimeType}');
     }
-    return driver;
+    return provider;
   }
 
-  /// Gets the appropriate driver for the given URI
+  /// Gets the appropriate provider for the given URI
   ///
-  /// Throws [UnsupportedError] if no driver is registered for the URI's scheme.
-  XStorageDriver getDriver(XStorageUri uri) {
+  /// Throws [UnsupportedError] if no provider is registered for the URI's scheme.
+  XStorageProvider getProvider(XUri uri) {
     final scheme = uri.scheme;
-    if (_drivers.containsKey(scheme)) {
-      return _drivers[scheme]!;
+    if (_providers.containsKey(scheme)) {
+      return _providers[scheme]!;
     }
     throw UnsupportedError('Unknown storage scheme in URI: $scheme');
   }
 
-  /// match driver from uri
+  /// match provider from uri
   Future<T> withResource<T>({
-    required XStorageUri xStorageUri,
+    required XUri xUri,
     required Future<T> Function(Uri uri) network,
     required Future<T> Function(String filePath) file,
     required Future<T> Function(String assetName) asset,
     required Future<T> Function(XFile xFile) onNoMatch,
   }) async {
-    final driver = getDriver(xStorageUri);
-    if (driver is NetworkXStorageMixin) {
-      final uri = await driver.getNetworkUrl(xStorageUri);
+    final provider = getProvider(xUri);
+    if (provider is NetworkProviderMixin) {
+      final uri = await provider.getNetworkUrl(xUri);
       return await network(uri);
-    } else if (driver is FileXStorageMixin) {
-      final filePath = await driver.getFilePath(xStorageUri);
+    } else if (provider is FileProviderMixin) {
+      final filePath = await provider.getFilePath(xUri);
       return await file(filePath);
-    } else if (driver is AssetXStorageMixin) {
-      return await asset(xStorageUri.path);
+    } else if (provider is AssetProviderMixin) {
+      return await asset(xUri.path);
     }
-    final xFile = await loadXFile(xStorageUri);
+    final xFile = await loadXFile(xUri);
     if (xFile == null) {
-      throw Exception('File not found: ${xStorageUri.toString()}');
+      throw Exception('File not found: ${xUri.toString()}');
     }
     return await onNoMatch(xFile);
   }
 
   /// Saves file data to the specified URI
   ///
-  /// The appropriate driver will be selected based on the URI's scheme.
-  Future<void> saveFile(XStorageUri uri, Uint8List data) async {
-    final driver = getDriver(uri);
-    await driver.saveFile(uri, data);
+  /// The appropriate provider will be selected based on the URI's scheme.
+  Future<void> saveFile(XUri uri, Uint8List data) async {
+    final provider = getProvider(uri);
+    await provider.saveFile(uri, data);
   }
 
   /// Loads file data from the specified URI
   ///
   /// Returns null if the file doesn't exist.
-  Future<Uint8List?> loadFile(XStorageUri uri) async {
-    final driver = getDriver(uri);
-    return await driver.loadFile(uri);
+  Future<Uint8List?> loadFile(XUri uri) async {
+    final provider = getProvider(uri);
+    return await provider.loadFile(uri);
   }
 
   /// Deletes the file at the specified URI
-  Future<void> deleteFile(XStorageUri uri) async {
-    final driver = getDriver(uri);
-    await driver.deleteFile(uri);
+  Future<void> deleteFile(XUri uri) async {
+    final provider = getProvider(uri);
+    await provider.deleteFile(uri);
   }
 
   /// Checks if a file exists at the specified URI
-  Future<bool> exists(XStorageUri uri) async {
-    final driver = getDriver(uri);
-    return await driver.exists(uri);
+  Future<bool> exists(XUri uri) async {
+    final provider = getProvider(uri);
+    return await provider.exists(uri);
   }
 
   /// Saves an XFile to the specified URI
-  Future<void> saveXFile(XStorageUri uri, XFile file) async {
+  Future<void> saveXFile(XUri uri, XFile file) async {
     final data = await file.readAsBytes();
     await saveFile(uri, data);
   }
@@ -119,20 +120,20 @@ class XStorage {
   /// Loads an XFile from the specified URI
   ///
   /// Returns null if the file doesn't exist.
-  Future<XFile?> loadXFile(XStorageUri uri) async {
+  Future<XFile?> loadXFile(XUri uri) async {
     final data = await loadFile(uri);
-    final driver = getDriver(uri);
+    final provider = getProvider(uri);
 
     String? path;
-    if (driver is FileXStorageMixin) {
-      path = await driver.getFilePath(uri);
+    if (provider is FileProviderMixin) {
+      path = await provider.getFilePath(uri);
     }
 
     return data == null ? null : XFile.fromData(data, path: path);
   }
 
   /// Saves a Base64 encoded string to the specified URI
-  Future<void> saveString(XStorageUri uri, String data) async {
+  Future<void> saveString(XUri uri, String data) async {
     final dataBytes = base64Decode(data);
     await saveFile(uri, dataBytes);
   }
@@ -140,14 +141,14 @@ class XStorage {
   /// Loads a Base64 encoded string from the specified URI
   ///
   /// Returns null if the file doesn't exist.
-  Future<String?> loadString(XStorageUri uri) async {
+  Future<String?> loadString(XUri uri) async {
     final data = await loadFile(uri);
     return data == null ? null : base64Encode(data);
   }
 
   /// Gets the storage type for the specified URI
-  XStorageType getStorageType(XStorageUri uri) {
-    final driver = getDriver(uri);
-    return driver.storageType;
+  XStorageType getStorageType(XUri uri) {
+    final provider = getProvider(uri);
+    return provider.storageType;
   }
 }

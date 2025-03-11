@@ -1,6 +1,6 @@
 name: x_storage_presigned_url
 description: Presigned URL storage driver for XStorage
-version: 0.0.4
+version: 0.1.0
 homepage: https://github.com/soraef/x_storage
 
 environment:
@@ -10,11 +10,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  x_storage_core: ^0.0.4
-  # x_storage_core:
-  #   path: ../x_storage_core
-  http: ^1.1.0
- 
+  x_storage_core: ^0.1.0
+  http: ^1.2.0
 
 dev_dependencies:
   flutter_test:

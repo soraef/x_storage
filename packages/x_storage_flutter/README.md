@@ -42,7 +42,7 @@ final storage = XStorage();
 
 // Display an image
 XStorageImage(
-  uri: XStorageUri.create('my_storage', 'path/to/image.jpg'),
+  uri: XUri.create('my_storage', 'path/to/image.jpg'),
   xStorage: storage,
   width: 200,
   height: 200,
@@ -65,7 +65,7 @@ final audioService = XStorageAudioService(storage);
 
 // Play audio
 await audioService.play(
-  XStorageUri.create('my_storage', 'path/to/audio.mp3'),
+  XUri.create('my_storage', 'path/to/audio.mp3'),
 );
 
 // Stop playback

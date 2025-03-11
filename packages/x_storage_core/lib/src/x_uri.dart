@@ -6,21 +6,21 @@
 ///
 /// Example:
 /// ```dart
-/// final uri = XStorageUri.create('s3', 'path/to/file.txt');
+/// final uri = XUri.create('s3', 'path/to/file.txt');
 /// print(uri.scheme); // 's3'
 /// print(uri.path); // '/path/to/file.txt'
 /// ```
-extension type XStorageUri(Uri uri) implements Uri {
-  /// Creates a new [XStorageUri] with the specified scheme and path
+extension type XUri(Uri uri) implements Uri {
+  /// Creates a new [XUri] with the specified scheme and path
   ///
   /// The [scheme] parameter specifies the storage type (e.g., 's3', 'file').
   /// The [path] parameter specifies the path to the resource.
-  factory XStorageUri.create(String scheme, String path) {
-    return XStorageUri(Uri.parse("$scheme:///$path"));
+  factory XUri.create(String scheme, String path) {
+    return XUri(Uri.parse("$scheme:///$path"));
   }
 
   /// スキーマを変更する
-  XStorageUri changeScheme(String scheme) {
-    return XStorageUri(Uri.parse("$scheme:///$path"));
+  XUri changeScheme(String scheme) {
+    return XUri(Uri.parse("$scheme:///$path"));
   }
 }

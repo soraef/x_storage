@@ -1,26 +1,25 @@
-import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:x_storage_core/x_storage_core.dart';
 import 'package:flutter/foundation.dart';
 
-/// Abstract driver for storage services that use Presigned URLs for upload/download
+/// Abstract provider for storage services that use Presigned URLs for upload/download
 ///
-/// This driver implements file operations using Presigned URLs, typically used with
+/// This provider implements file operations using Presigned URLs, typically used with
 /// services like AWS S3 or other S3-compatible storage services.
 ///
-/// To implement this driver, you need to:
+/// To implement this provider, you need to:
 /// 1. Override [scheme] to specify your storage scheme
 /// 2. Implement [fetchUploadPresignedUrl] to generate Presigned URLs for upload
-/// 3. Implement [getNetworkUrl] from NetworkXStorageMixin for download URLs
-abstract class PresignedUrlXStorageDriver extends XStorageDriver
-    with NetworkXStorageMixin {
+/// 3. Implement [getNetworkUrl] from NetworkProviderMixin for download URLs
+abstract class PresignedUrlStorageProvider extends XStorageProvider
+    with NetworkProviderMixin {
   bool get enableDownloadPresignedUrl;
 
   @override
   String get scheme;
 
   @override
-  Future<void> saveFile(XStorageUri uri, Uint8List data) async {
+  Future<void> saveFile(XUri uri, Uint8List data) async {
     // Extract filename and directories from uri.pathSegments
     final pathSegments = uri.pathSegments;
     final filename = pathSegments.last;
@@ -37,7 +36,7 @@ abstract class PresignedUrlXStorageDriver extends XStorageDriver
   }
 
   @override
-  Future<Uint8List?> loadFile(XStorageUri uri) async {
+  Future<Uint8List?> loadFile(XUri uri) async {
     final url = await getNetworkUrl(uri);
 
     try {
@@ -53,12 +52,12 @@ abstract class PresignedUrlXStorageDriver extends XStorageDriver
   }
 
   @override
-  Future<void> deleteFile(XStorageUri uri) async {
+  Future<void> deleteFile(XUri uri) async {
     throw UnsupportedError("delete operation not implemented");
   }
 
   @override
-  Future<bool> exists(XStorageUri uri) async {
+  Future<bool> exists(XUri uri) async {
     try {
       final completeUri = await getNetworkUrl(uri);
       final response = await http.head(completeUri);
@@ -70,7 +69,7 @@ abstract class PresignedUrlXStorageDriver extends XStorageDriver
   }
 
   @override
-  Future<Uri> getNetworkUrl(XStorageUri uri) async {
+  Future<Uri> getNetworkUrl(XUri uri) async {
     if (!enableDownloadPresignedUrl) {
       return await super.getNetworkUrl(uri);
     }

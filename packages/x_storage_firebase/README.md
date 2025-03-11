@@ -13,11 +13,11 @@ and the Flutter guide for
 
 # x_storage_firebase
 
-A package that provides Firebase Storage driver for XStorage. It enables file operations such as saving, loading, and deleting files using Firebase Storage.
+A package that provides Firebase Storage provider for XStorage. It enables file operations such as saving, loading, and deleting files using Firebase Storage.
 
 ## Features
 
-- XStorage driver implementation for Firebase Storage
+- XStorage provider implementation for Firebase Storage
 - File save, load, delete, and existence check operations
 - Compliance with Firebase Storage security rules
 
@@ -48,9 +48,9 @@ await Firebase.initializeApp();
 // Create XStorage instance
 final storage = XStorage();
 
-// Register Firebase Storage driver
+// Register Firebase Storage provider
 final firebaseStorage = FirebaseStorage.instance;
-storage.registerDriver(FirebaseXStorageDriver(firebaseStorage: firebaseStorage));
+storage.registerProvider(FirebaseStorageProvider(firebaseStorage: firebaseStorage));
 ```
 
 ### Basic Usage
@@ -58,23 +58,23 @@ storage.registerDriver(FirebaseXStorageDriver(firebaseStorage: firebaseStorage))
 ```dart
 // Save a file
 await storage.saveFile(
-  XStorageUri.create('firebase', 'path/to/file.txt'),
+  XUri.create('firebase', 'path/to/file.txt'),
   Uint8List.fromList([/* data */]),
 );
 
 // Load a file
 final data = await storage.loadFile(
-  XStorageUri.create('firebase', 'path/to/file.txt'),
+  XUri.create('firebase', 'path/to/file.txt'),
 );
 
 // Delete a file
 await storage.deleteFile(
-  XStorageUri.create('firebase', 'path/to/file.txt'),
+  XUri.create('firebase', 'path/to/file.txt'),
 );
 
 // Check if a file exists
 final exists = await storage.exists(
-  XStorageUri.create('firebase', 'path/to/file.txt'),
+  XUri.create('firebase', 'path/to/file.txt'),
 );
 ```
 

@@ -1,1 +1,1 @@
-export 'src/file_x_storage_driver.dart';
+export 'src/file_storage_provider.dart';

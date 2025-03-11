@@ -1,3 +1,21 @@
+## 0.1.0
+
+* Updated to use x_storage_core 0.1.0
+* Added support for video_player
+* Improved documentation
+
+## 0.0.4
+
+* Fix bugs
+
+## 0.0.3
+
+* Fix bugs
+
+## 0.0.2
+
+* Fix bugs
+
 ## 0.0.1
 
 * Initial release

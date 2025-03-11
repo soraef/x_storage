@@ -1,24 +1,23 @@
-import 'dart:typed_data';
-
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:x_storage_core/x_storage_core.dart';
 import 'package:flutter/foundation.dart';
 
-/// XStorage driver for Firebase Storage
+/// XStorage provider for Firebase Storage
 ///
-/// This driver implements the XStorage interface for Firebase Storage,
+/// This provider implements the XStorage interface for Firebase Storage,
 /// providing file operations that interact with Firebase Storage.
-class FirebaseXStorageDriver extends XStorageDriver with NetworkXStorageMixin {
+class FirebaseStorageProvider extends XStorageProvider
+    with NetworkProviderMixin {
   @override
   final String scheme = 'firebase';
 
   /// The Firebase Storage instance to use for operations
   final FirebaseStorage firebaseStorage;
 
-  /// Creates a new [FirebaseXStorageDriver] instance
+  /// Creates a new [FirebaseStorageProvider] instance
   ///
   /// [firebaseStorage] is the Firebase Storage instance to use
-  FirebaseXStorageDriver({
+  FirebaseStorageProvider({
     required this.firebaseStorage,
   });
 
@@ -26,20 +25,20 @@ class FirebaseXStorageDriver extends XStorageDriver with NetworkXStorageMixin {
   String get rootUrl => firebaseStorage.bucket;
 
   @override
-  Future<Uri> getNetworkUrl(XStorageUri uri) async {
+  Future<Uri> getNetworkUrl(XUri uri) async {
     final ref = firebaseStorage.ref().child(uri.path);
     final url = await ref.getDownloadURL();
     return Uri.parse(url);
   }
 
   @override
-  Future<void> saveFile(XStorageUri uri, Uint8List data) async {
+  Future<void> saveFile(XUri uri, Uint8List data) async {
     final ref = firebaseStorage.ref().child(uri.path);
     await ref.putData(data);
   }
 
   @override
-  Future<Uint8List?> loadFile(XStorageUri uri) async {
+  Future<Uint8List?> loadFile(XUri uri) async {
     final ref = firebaseStorage.ref().child(uri.path);
     try {
       final data = await ref.getData();
@@ -52,13 +51,13 @@ class FirebaseXStorageDriver extends XStorageDriver with NetworkXStorageMixin {
   }
 
   @override
-  Future<void> deleteFile(XStorageUri uri) async {
+  Future<void> deleteFile(XUri uri) async {
     final ref = firebaseStorage.ref().child(uri.path);
     await ref.delete();
   }
 
   @override
-  Future<bool> exists(XStorageUri uri) async {
+  Future<bool> exists(XUri uri) async {
     try {
       await firebaseStorage.ref().child(uri.path).getDownloadURL();
       return true;

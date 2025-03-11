@@ -1,6 +1,6 @@
 name: x_storage_core
-description: Core package for x_storage providing XStorageDriver and other base functionality
-version: 0.0.4
+description: Core package for x_storage providing XStorageProvider and other base functionality
+version: 0.1.0
 homepage: https://github.com/soraef/x_storage
 
 environment:

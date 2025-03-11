@@ -1,6 +1,6 @@
 name: x_storage_file
 description: File driver for XStorage
-version: 0.0.4
+version: 0.1.0
 # homepage:
 
 environment:
@@ -10,7 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  x_storage_core: ^0.0.4
+  x_storage_core: ^0.1.0
   # x_storage_core:
   #   path: ../x_storage_core
   

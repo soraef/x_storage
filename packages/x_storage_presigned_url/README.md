@@ -13,11 +13,11 @@ and the Flutter guide for
 
 # x_storage_presigned_url
 
-A storage driver package for XStorage that supports Presigned URL-based storage services such as AWS S3 and other S3-compatible storage services.
+A storage provider package for XStorage that supports Presigned URL-based storage services such as AWS S3 and other S3-compatible storage services.
 
 ## Features
 
-- Abstract driver implementation for Presigned URL-based storage
+- Abstract provider implementation for Presigned URL-based storage
 - File upload and download using Presigned URLs
 - File existence check
 - Support for AWS S3 and other S3-compatible storage services
@@ -34,15 +34,15 @@ dependencies:
   x_storage_core: ^0.0.1
 ```
 
-### Implementing the Driver
+### Implementing the Provider
 
-To implement your own Presigned URL storage driver, extend the `PresignedUrlXStorageDriver` class:
+To implement your own Presigned URL storage provider, extend the `PresignedUrlXStorageProvider` class:
 
 ```dart
 import 'package:x_storage_presigned_url/x_storage_presigned_url.dart';
 import 'package:x_storage_core/x_storage_core.dart';
 
-class MyPresignedUrlDriver extends PresignedUrlXStorageDriver {
+class MyPresignedUrlProvider extends PresignedUrlXStorageProvider {
   @override
   String get scheme => 'my_storage';
 
@@ -64,23 +64,23 @@ class MyPresignedUrlDriver extends PresignedUrlXStorageDriver {
 // Create XStorage instance
 final storage = XStorage();
 
-// Register your custom driver
-storage.registerDriver(MyPresignedUrlDriver());
+// Register your custom provider
+storage.registerProvider(MyPresignedUrlProvider());
 
 // Save a file
 await storage.saveFile(
-  XStorageUri.create('my_storage', 'path/to/file.txt'),
+  XUri.create('my_storage', 'path/to/file.txt'),
   Uint8List.fromList([/* data */]),
 );
 
 // Load a file
 final data = await storage.loadFile(
-  XStorageUri.create('my_storage', 'path/to/file.txt'),
+  XUri.create('my_storage', 'path/to/file.txt'),
 );
 
 // Check if file exists
 final exists = await storage.exists(
-  XStorageUri.create('my_storage', 'path/to/file.txt'),
+  XUri.create('my_storage', 'path/to/file.txt'),
 );
 ```
 
@@ -91,11 +91,11 @@ final exists = await storage.exists(
 ```dart
 import 'package:aws_s3_api/aws_s3_api.dart';
 
-class S3PresignedUrlDriver extends PresignedUrlXStorageDriver {
+class S3PresignedUrlProvider extends PresignedUrlXStorageProvider {
   final S3Client s3Client;
   final String bucketName;
 
-  S3PresignedUrlDriver({
+  S3PresignedUrlProvider({
     required this.s3Client,
     required this.bucketName,
   });
@@ -122,9 +122,9 @@ class S3PresignedUrlDriver extends PresignedUrlXStorageDriver {
 
 ## Implementation Details
 
-The `PresignedUrlXStorageDriver` provides the following features:
+The `PresignedUrlXStorageProvider` provides the following features:
 
-- Network operations implementation using `NetworkXStorageMixin`
+- Network operations implementation using `NetworkProviderMixin`
 - `saveFile`: File upload using PUT request with Presigned URL
 - `loadFile`: File download using network URL
 - `exists`: File existence check using HEAD request
@@ -151,7 +151,7 @@ Methods that must be implemented when extending:
 
 ## Supported Storage Services
 
-This driver can be used with storage services that support Presigned URLs, including:
+This provider can be used with storage services that support Presigned URLs, including:
 
 - Amazon S3
 - Google Cloud Storage (Signed URLs)
