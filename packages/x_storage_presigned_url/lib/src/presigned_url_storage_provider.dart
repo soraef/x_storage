@@ -1,6 +1,9 @@
 import 'package:http/http.dart' as http;
 import 'package:x_storage_core/x_storage_core.dart';
 import 'package:flutter/foundation.dart';
+import 'package:type_result/type_result.dart';
+
+import 'presigned_url_storage_exception.dart';
 
 /// Abstract provider for storage services that use Presigned URLs for upload/download
 ///
@@ -19,41 +22,55 @@ abstract class PresignedUrlStorageProvider extends XStorageProvider
   String get scheme;
 
   @override
-  Future<void> saveFile(XUri uri, Uint8List data) async {
-    // Extract filename and directories from uri.pathSegments
-    final pathSegments = uri.pathSegments;
-    final filename = pathSegments.last;
-    final dirs = pathSegments.sublist(0, pathSegments.length - 1);
+  Future<Result<void, XStorageException>> saveFile(
+    XUri uri,
+    Uint8List data,
+  ) async {
+    try {
+      // Extract filename and directories from uri.pathSegments
+      final pathSegments = uri.pathSegments;
+      final filename = pathSegments.last;
+      final dirs = pathSegments.sublist(0, pathSegments.length - 1);
 
-    // Get the Presigned URL for upload
-    final url = await fetchUploadPresignedUrl(dirs: dirs, filename: filename);
+      // Get the Presigned URL for upload
+      final url = await fetchUploadPresignedUrl(dirs: dirs, filename: filename);
 
-    // Upload using PUT request
-    final response = await http.put(Uri.parse(url), body: data);
-    if (response.statusCode != 200) {
-      throw Exception("Failed to upload file to storage");
+      // Upload using PUT request
+      final response = await http.put(Uri.parse(url), body: data);
+      if (response.statusCode != 200) {
+        return Result.failure(
+          HttpException(
+            "Failed to upload file to storage: ${response.statusCode}",
+          ),
+        );
+      }
+      return Result.success(null);
+    } catch (e) {
+      return Result.failure(UnknownException(e));
     }
   }
 
   @override
-  Future<Uint8List?> loadFile(XUri uri) async {
-    final url = await getNetworkUrl(uri);
-
+  Future<Result<Uint8List, XStorageException>> loadFile(XUri uri) async {
     try {
+      final url = await getNetworkUrl(uri);
       final response = await http.get(url);
+
       if (response.statusCode == 200) {
-        return response.bodyBytes;
+        return Result.success(response.bodyBytes);
       }
-      return null;
+      return Result.failure(FileNotFoundException(uri));
     } catch (e) {
       debugPrint('Error reading file from storage: $e');
-      return null;
+      return Result.failure(UnknownException(e));
     }
   }
 
   @override
-  Future<void> deleteFile(XUri uri) async {
-    throw UnsupportedError("delete operation not implemented");
+  Future<Result<void, XStorageException>> deleteFile(XUri uri) async {
+    return Result.failure(
+      UnsupportedOperationException("delete operation not implemented"),
+    );
   }
 
   @override

@@ -72,16 +72,16 @@ class _XStorageImageState extends State<XStorageImage> {
         break;
 
       case XStorageType.file:
-        final xFile = await widget.xStorage.loadXFile(widget.uri);
-        if (xFile != null) {
-          file = File(xFile.path);
+        final xFileResult = await widget.xStorage.loadXFile(widget.uri);
+        if (xFileResult.isSuccess) {
+          file = File(xFileResult.success.path);
         }
         break;
 
       case XStorageType.other:
-        final xFile = await widget.xStorage.loadXFile(widget.uri);
-        if (xFile != null) {
-          file = File(xFile.path);
+        final xFileResult = await widget.xStorage.loadXFile(widget.uri);
+        if (xFileResult.isSuccess) {
+          file = File(xFileResult.success.path);
         }
         break;
     }

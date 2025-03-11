@@ -1,7 +1,7 @@
 name: x_storage_file
 description: File driver for XStorage
-version: 0.1.0
-# homepage:
+version: 0.2.0
+homepage: https://github.com/soraef/x_storage
 
 environment:
   sdk: ^3.6.1
@@ -10,12 +10,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  x_storage_core: ^0.1.0
+  x_storage_core: ^0.2.1
   # x_storage_core:
   #   path: ../x_storage_core
   
   dio: ^5.8.0
   path_provider: ^2.1.5
+  type_result: ^3.0.1
   # firebase_storage: ^12.4.1
 
 dev_dependencies:

@@ -1,6 +1,7 @@
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:x_storage_core/x_storage_core.dart';
 import 'package:flutter/foundation.dart';
+import 'package:type_result/type_result.dart';
 
 /// XStorage provider for Firebase Storage
 ///
@@ -32,28 +33,41 @@ class FirebaseStorageProvider extends XStorageProvider
   }
 
   @override
-  Future<void> saveFile(XUri uri, Uint8List data) async {
-    final ref = firebaseStorage.ref().child(uri.path);
-    await ref.putData(data);
-  }
-
-  @override
-  Future<Uint8List?> loadFile(XUri uri) async {
-    final ref = firebaseStorage.ref().child(uri.path);
+  Future<Result<void, XStorageException>> saveFile(
+      XUri uri, Uint8List data) async {
     try {
-      final data = await ref.getData();
-      return data;
+      final ref = firebaseStorage.ref().child(uri.path);
+      await ref.putData(data);
+      return Result.success(null);
     } catch (e) {
-      // Handle cases where the file doesn't exist or other errors occur
-      debugPrint('Error reading file from Firebase Storage: $e');
-      return null;
+      return Result.failure(UnknownException(e));
     }
   }
 
   @override
-  Future<void> deleteFile(XUri uri) async {
-    final ref = firebaseStorage.ref().child(uri.path);
-    await ref.delete();
+  Future<Result<Uint8List, XStorageException>> loadFile(XUri uri) async {
+    try {
+      final ref = firebaseStorage.ref().child(uri.path);
+      final data = await ref.getData();
+      if (data == null) {
+        return Result.failure(FileNotFoundException(uri));
+      }
+      return Result.success(data);
+    } catch (e) {
+      debugPrint('Error reading file from Firebase Storage: $e');
+      return Result.failure(UnknownException(e));
+    }
+  }
+
+  @override
+  Future<Result<void, XStorageException>> deleteFile(XUri uri) async {
+    try {
+      final ref = firebaseStorage.ref().child(uri.path);
+      await ref.delete();
+      return Result.success(null);
+    } catch (e) {
+      return Result.failure(UnknownException(e));
+    }
   }
 
   @override

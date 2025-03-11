@@ -1,6 +1,6 @@
 name: x_storage_core
 description: Core package for x_storage providing XStorageProvider and other base functionality
-version: 0.1.0
+version: 0.2.1
 homepage: https://github.com/soraef/x_storage
 
 environment:
@@ -11,6 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   cross_file: ^0.3.3
+  type_result: ^3.0.1
  
 
 dev_dependencies:

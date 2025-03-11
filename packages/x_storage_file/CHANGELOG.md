@@ -1,3 +1,9 @@
+## 0.2.0
+
+* **BREAKING CHANGE**: Updated to support x_storage_core 0.2.0
+* Migrated to Result type for error handling
+* All operations now return Result<T, XStorageException>
+
 ## 0.1.0
 
 * **BREAKING CHANGE**: Renamed `FileXStorageDriver` to `FileStorageProvider` for better semantic clarity

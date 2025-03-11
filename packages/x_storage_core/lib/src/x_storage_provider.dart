@@ -1,6 +1,9 @@
 import 'dart:typed_data';
+import 'package:type_result/type_result.dart';
+import 'x_storage_exception.dart';
 import 'x_storage_type.dart';
 import 'x_uri.dart';
+import 'x_storage.dart';
 
 /// Abstract base class for storage providers
 ///
@@ -14,21 +17,22 @@ abstract class XStorageProvider {
   String get scheme;
 
   /// Saves data to the specified URI
-  Future<void> saveFile(XUri uri, Uint8List data);
+  Future<Result<void, XStorageException>> saveFile(XUri uri, Uint8List data);
 
   /// Loads data from the specified URI
   ///
-  /// Returns null if the file doesn't exist.
-  Future<Uint8List?> loadFile(XUri uri);
+  /// Returns Failure(FileNotFoundError) if the file doesn't exist.
+  Future<Result<Uint8List, XStorageException>> loadFile(XUri uri);
 
   /// Deletes the file at the specified URI
-  Future<void> deleteFile(XUri uri);
+  Future<Result<void, XStorageException>> deleteFile(XUri uri);
 
   /// Checks if a file exists at the specified URI
   ///
-  /// Default implementation checks if [loadFile] returns non-null data.
+  /// Default implementation checks if [loadFile] returns Success.
   Future<bool> exists(XUri uri) async {
-    return await loadFile(uri).then((value) => value != null);
+    final result = await loadFile(uri);
+    return result.isSuccess;
   }
 
   /// Gets the storage type for this provider

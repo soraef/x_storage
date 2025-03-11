@@ -1,8 +1,14 @@
+## 0.2.0
+
+* **BREAKING CHANGE**: Updated to support x_storage_core 0.2.0
+* Migrated to Result type for error handling
+* All operations now return Result<T, XStorageException>
+
 ## 0.1.0
 
-* **BREAKING CHANGE**: Renamed `FirebaseXStorageDriver` to `FirebaseStorageProvider` for better semantic clarity
-* Updated to use x_storage_core 0.1.0
-* Improved documentation
+* Initial release
+* Implementation of Firebase Storage provider
+* Support for Firebase Storage operations
 
 ## 0.0.4
 

@@ -1,3 +1,16 @@
+
+## 0.2.1
+
+* Added export `XStorageException`
+
+## 0.2.0
+
+* **BREAKING CHANGE**: Migrated error handling to use `Result` type from `type_result` package
+* **BREAKING CHANGE**: Renamed `XStorageError` to `XStorageException`
+* All storage operations now return `Result<T, XStorageException>`
+* Improved type safety in error handling
+* Added dependency on `type_result: ^3.0.1`
+
 ## 0.1.0
 
 * **BREAKING CHANGE**: Renamed `XStorageDriver` to `XStorageProvider` for better semantic clarity

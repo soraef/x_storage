@@ -1,9 +1,14 @@
+## 0.2.0
+
+* **BREAKING CHANGE**: Updated to support x_storage_core 0.2.0
+* Migrated to Result type for error handling
+* All operations now return Result<T, XStorageException>
+
 ## 0.1.0
 
-* **BREAKING CHANGE**: Renamed `PresignedUrlXStorageDriver` to `PresignedUrlXStorageProvider` for better semantic clarity
-* Updated to use x_storage_core 0.1.0
-* Updated http package to 1.2.0
-* Improved documentation
+* Initial release
+* Implementation of presigned URL storage provider
+* Support for S3-compatible storage services
 
 ## 0.0.4
 
