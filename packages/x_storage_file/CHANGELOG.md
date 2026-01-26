@@ -1,3 +1,7 @@
+## 0.2.3
+
+* Fixed: `saveFile()` and `downloadFile()` now automatically create parent directories if they don't exist
+
 ## 0.2.0
 
 * **BREAKING CHANGE**: Updated to support x_storage_core 0.2.0

@@ -50,6 +50,13 @@ class FileStorageProvider extends XStorageProvider with FileProviderMixin {
     try {
       final filePath = await getFilePath(uri);
       final file = File(filePath);
+
+      // 親ディレクトリが存在しない場合は作成
+      final parentDir = file.parent;
+      if (!await parentDir.exists()) {
+        await parentDir.create(recursive: true);
+      }
+
       await file.writeAsBytes(data);
       return Result.success(null);
     } catch (e) {
@@ -86,6 +93,20 @@ class FileStorageProvider extends XStorageProvider with FileProviderMixin {
 // }
 
 extension FileXStorageExtension on XStorage {
+  /// URIがすでにダウンロード済みかどうかを確認
+  ///
+  /// ファイルがローカルに存在する場合はtrueを返す
+  Future<bool> isDownloaded(XUri uri) async {
+    final fileProviderResult =
+        getProviderFromScheme<FileStorageProvider>('file');
+    if (fileProviderResult.isFailure) {
+      return false;
+    }
+    final fileProvider = fileProviderResult.success;
+    final fileStorageUri = uri.changeScheme(fileProvider.scheme);
+    return await fileProvider.exists(fileStorageUri);
+  }
+
   /// ファイルをダウンロードして保存
   ///
   /// ダウンロードしたファイルのURIを返す
@@ -122,8 +143,14 @@ extension FileXStorageExtension on XStorage {
       final filePath = await fileProvider.getFilePath(fileStorageUri);
 
       final file = File(filePath);
-      if (await file.exists()) {
-        return Result.success(fileStorageUri);
+      // if (await file.exists()) {
+      //   return Result.success(fileStorageUri);
+      // }
+
+      // 親ディレクトリが存在しない場合は作成
+      final parentDir = file.parent;
+      if (!await parentDir.exists()) {
+        await parentDir.create(recursive: true);
       }
 
       await fileProvider._dio.download(
