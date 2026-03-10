@@ -3,7 +3,6 @@ import 'package:type_result/type_result.dart';
 import 'x_storage_exception.dart';
 import 'x_storage_type.dart';
 import 'x_uri.dart';
-import 'x_storage.dart';
 
 /// Abstract base class for storage providers
 ///
@@ -52,7 +51,7 @@ abstract class XStorageProvider {
 mixin AssetProviderMixin on XStorageProvider {
   /// Converts a URI to an asset name
   String assetName(XUri uri) {
-    return uri.path;
+    return uri.path.substring(1);
   }
 
   @override

@@ -1,3 +1,10 @@
+## 0.4.0
+
+* Added `CachingProviderMixin` for cache management interface
+* Added `SyncProviderMixin` for sync status management interface
+* Added `SyncStatus` enum (`synced`, `pendingUpload`, `localOnly`, `pendingDelete`)
+* `XStorage.withResource()` now auto-detects cached files via `CachingProviderMixin`
+* Fixed `AssetProviderMixin.assetName` to strip leading slash
 
 ## 0.2.1
 

@@ -1,3 +1,9 @@
+## 0.4.0
+
+* `XStorageImage` now auto-detects `CachingProviderMixin` to prefer local file paths when cached
+* `XStorageAudioService` now supports file and asset playback in addition to network
+* Added `pause`, `resume`, `seek`, `setVolume`, `setLoop`, `setSpeed`, `dispose` methods to `XStorageAudioService`
+
 ## 0.2.0
 
 * **BREAKING CHANGE**: Updated to support x_storage_core 0.2.0

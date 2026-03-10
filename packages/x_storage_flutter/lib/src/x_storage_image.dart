@@ -56,19 +56,40 @@ class _XStorageImageState extends State<XStorageImage> {
   }
 
   Future<void> _load() async {
+    // キャッシュ済みの場合はローカルファイルとして表示
+    final providerResult = widget.xStorage.getProvider(widget.uri);
+    if (providerResult.isSuccess) {
+      final provider = providerResult.success;
+      if (provider is CachingProviderMixin) {
+        final cachedPath = await provider.getCachedFilePath(widget.uri);
+        if (cachedPath != null) {
+          storageType = XStorageType.file;
+          file = File(cachedPath);
+          return;
+        }
+      }
+    }
+
     storageType = widget.xStorage.getStorageType(widget.uri);
 
     switch (storageType) {
       case XStorageType.asset:
-        final driver =
-            widget.xStorage.getProvider(widget.uri) as AssetProviderMixin;
-        assetPath = driver.assetName(widget.uri);
+        final providerResult = widget.xStorage.getProvider(widget.uri);
+        if (providerResult.isFailure) {
+          throw Exception('Unsupported storage driver for asset');
+        }
+        final provider = providerResult.success as AssetProviderMixin;
+
+        assetPath = provider.assetName(widget.uri);
         break;
 
       case XStorageType.network:
-        final driver =
-            widget.xStorage.getProvider(widget.uri) as NetworkProviderMixin;
-        networkUri = await driver.getNetworkUrl(widget.uri);
+        final providerResult = widget.xStorage.getProvider(widget.uri);
+        if (providerResult.isFailure) {
+          throw Exception('Unsupported storage driver for network');
+        }
+        final provider = providerResult.success as NetworkProviderMixin;
+        networkUri = await provider.getNetworkUrl(widget.uri);
         break;
 
       case XStorageType.file:

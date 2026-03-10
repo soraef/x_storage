@@ -22,25 +22,76 @@ class XStorageAudioService {
   /// (i.e., doesn't implement NetworkProviderMixin)
   Future<void> play(XUri uri) async {
     await stop();
-    final driver = _xStorage.getProvider(uri);
+    final providerResult = _xStorage.getProvider(uri);
 
-    // Example: Only support network-based storage
-    if (driver is! NetworkProviderMixin) {
+    if (providerResult.isFailure) {
       throw Exception('Unsupported storage driver for audio playback');
     }
 
-    final audioUrl = await driver.getNetworkUrl(uri);
+    final provider = providerResult.success;
 
-    try {
-      await _audioPlayer.setUrl(audioUrl.toString());
-      await _audioPlayer.play();
-    } catch (e) {
-      debugPrint('Error playing audio: $e');
+    // Example: Only support network-based storage
+    if (provider is NetworkProviderMixin) {
+      await _playNetwork(provider, uri);
     }
+
+    if (provider is FileProviderMixin) {
+      await _playFile(provider, uri);
+    }
+
+    if (provider is AssetProviderMixin) {
+      await _playAsset(provider, uri);
+    }
+  }
+
+  void dispose() {
+    _audioPlayer.dispose();
   }
 
   /// Stops the currently playing audio
   Future<void> stop() async {
     await _audioPlayer.stop();
+  }
+
+  Future<void> setVolume(double volume) async {
+    await _audioPlayer.setVolume(volume);
+  }
+
+  Future<void> setLoop(bool loop) async {
+    await _audioPlayer.setLoopMode(loop ? LoopMode.all : LoopMode.off);
+  }
+
+  Future<void> seek(Duration position) async {
+    await _audioPlayer.seek(position);
+  }
+
+  Future<void> pause() async {
+    await _audioPlayer.pause();
+  }
+
+  Future<void> resume() async {
+    await _audioPlayer.play();
+  }
+
+  Future<void> setSpeed(double speed) async {
+    await _audioPlayer.setSpeed(speed);
+  }
+
+  Future<void> _playNetwork(NetworkProviderMixin provider, XUri uri) async {
+    final audioUrl = await provider.getNetworkUrl(uri);
+    await _audioPlayer.setUrl(audioUrl.toString());
+    await _audioPlayer.play();
+  }
+
+  Future<void> _playFile(FileProviderMixin provider, XUri uri) async {
+    final file = await provider.getFilePath(uri);
+    await _audioPlayer.setFilePath(file);
+    await _audioPlayer.play();
+  }
+
+  Future<void> _playAsset(AssetProviderMixin provider, XUri uri) async {
+    final asset = provider.assetName(uri);
+    await _audioPlayer.setAsset(asset);
+    await _audioPlayer.play();
   }
 }

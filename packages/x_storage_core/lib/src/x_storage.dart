@@ -1,10 +1,10 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:cross_file/cross_file.dart';
 import 'package:type_result/type_result.dart';
 
+import 'caching_provider_mixin.dart';
 import 'x_storage_exception.dart';
 import 'x_storage_provider.dart';
 import 'x_storage_type.dart';
@@ -78,6 +78,13 @@ class XStorage {
       }
 
       final provider = providerResult.success;
+      // キャッシュ済みの場合はローカルファイルパスを使用
+      if (provider is CachingProviderMixin) {
+        final cachedPath = await provider.getCachedFilePath(xUri);
+        if (cachedPath != null) {
+          return Result.success(await file(cachedPath));
+        }
+      }
       if (provider is NetworkProviderMixin) {
         final uri = await provider.getNetworkUrl(xUri);
         return Result.success(await network(uri));

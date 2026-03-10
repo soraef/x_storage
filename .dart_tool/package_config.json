@@ -230,10 +230,10 @@
       "languageVersion": "3.6"
     }
   ],
-  "generated": "2025-03-10T07:19:54.665571Z",
+  "generated": "2025-04-03T03:55:05.868029Z",
   "generator": "pub",
-  "generatorVersion": "3.7.0",
-  "flutterRoot": "file:///Users/fukui/fvm/versions/3.29.1",
-  "flutterVersion": "3.29.1",
+  "generatorVersion": "3.7.2",
+  "flutterRoot": "file:///Users/fukui/fvm/versions/3.29.2",
+  "flutterVersion": "3.29.2",
   "pubCache": "file:///Users/fukui/.pub-cache"
 }

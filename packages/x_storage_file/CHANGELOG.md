@@ -1,3 +1,10 @@
+## 0.4.0
+
+* Added `SyncStorageProvider` for local-first storage with remote sync
+* Added `SyncMetadataStore` and `JsonSyncMetadataStore` for sync metadata persistence
+* Added `CachingStorageProvider` for automatic local caching of network files with offline support
+* Fixed `SyncStorageProvider.setRemote` return type from `void` to `Future<void>`
+
 ## 0.2.3
 
 * Fixed: `saveFile()` and `downloadFile()` now automatically create parent directories if they don't exist

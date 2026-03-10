@@ -1,3 +1,10 @@
+## 0.4.0
+
+* Added `contentType` and `sizeBytes` parameters to `fetchUploadPresignedUrl`
+* Added `uploadHeaders` hook for custom PUT request headers
+* Added `onSaveComplete` hook for post-upload actions
+* Added automatic MIME type detection from file extension
+
 ## 0.2.0
 
 * **BREAKING CHANGE**: Updated to support x_storage_core 0.2.0
