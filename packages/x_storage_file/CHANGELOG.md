@@ -1,3 +1,7 @@
+## 0.4.1
+
+* Added debug logging to `SyncStorageProvider.saveFile` for remote upload results
+
 ## 0.4.0
 
 * Added `SyncStorageProvider` for local-first storage with remote sync

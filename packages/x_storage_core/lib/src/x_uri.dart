@@ -21,6 +21,6 @@ extension type XUri(Uri uri) implements Uri {
 
   /// スキーマを変更する
   XUri changeScheme(String scheme) {
-    return XUri(Uri.parse("$scheme:///$path"));
+    return XUri(uri.replace(scheme: scheme));
   }
 }

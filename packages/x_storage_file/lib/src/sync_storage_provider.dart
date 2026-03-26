@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:type_result/type_result.dart';
 import 'package:x_storage_core/x_storage_core.dart';
 
@@ -124,11 +125,14 @@ class SyncStorageProvider extends XStorageProvider
     }
 
     // リモートに試行
-    final remoteResult =
-        await remote.saveFile(_remoteUri(uri, remote), data);
+    final remoteUri = _remoteUri(uri, remote);
+    debugPrint('[SyncStorage] Uploading to remote: $remoteUri');
+    final remoteResult = await remote.saveFile(remoteUri, data);
     if (remoteResult.isSuccess) {
+      debugPrint('[SyncStorage] Remote upload success: $uri');
       await _metadataStore.setStatus(uri, SyncStatus.synced);
     } else {
+      debugPrint('[SyncStorage] Remote upload failed: ${remoteResult.failure}');
       await _metadataStore.setStatus(uri, SyncStatus.pendingUpload);
     }
 

@@ -1,3 +1,7 @@
+## 0.4.1
+
+* Fixed `XUri.changeScheme` producing double leading slashes (e.g. `////path`) by using `Uri.replace` instead of string concatenation
+
 ## 0.4.0
 
 * Added `CachingProviderMixin` for cache management interface

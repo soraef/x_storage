@@ -1,6 +1,6 @@
 name: x_storage_file
 description: File driver for XStorage
-version: 0.4.0
+version: 0.4.1
 homepage: https://github.com/soraef/x_storage
 
 environment:
