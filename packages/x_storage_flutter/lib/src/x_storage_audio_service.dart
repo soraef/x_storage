@@ -1,6 +1,5 @@
 import 'package:just_audio/just_audio.dart';
 import 'package:x_storage_core/x_storage_core.dart';
-import 'package:flutter/foundation.dart';
 
 /// A simple service example that plays audio only through network storage
 /// (using NetworkProviderMixin)

@@ -1,3 +1,17 @@
+## 0.4.3
+
+* Added `alignment` support to `XStorageImage`.
+* Added preloading and resolved image caching for `XStorageImage`.
+* Keeps the previous image visible while resolving a new URI.
+
+## 0.4.2
+
+* Reverted gapless playback changes from 0.4.1 (image state should be managed by the caller)
+
+## 0.4.1 (deprecated)
+
+* `XStorageImage` now keeps the previous image visible while loading a new one (gapless playback)
+
 ## 0.4.0
 
 * `XStorageImage` now auto-detects `CachingProviderMixin` to prefer local file paths when cached
