@@ -1,6 +1,6 @@
 name: x_storage_presigned_url
 description: Presigned URL storage driver for XStorage
-version: 0.4.1
+version: 0.4.2
 homepage: https://github.com/soraef/x_storage
 
 environment:

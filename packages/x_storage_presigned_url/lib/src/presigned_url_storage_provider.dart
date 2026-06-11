@@ -21,6 +21,12 @@ abstract class PresignedUrlStorageProvider extends XStorageProvider
   @override
   String get scheme;
 
+  /// Reused HTTP client so repeated requests (head / exists / load / save)
+  /// keep the TCP/TLS connection alive instead of performing a fresh
+  /// handshake on every call. This significantly reduces latency when many
+  /// metadata requests are issued in a row (e.g. computing download sizes).
+  final http.Client _client = http.Client();
+
   @override
   Future<Result<void, XStorageException>> saveFile(
     XUri uri,
@@ -57,7 +63,7 @@ abstract class PresignedUrlStorageProvider extends XStorageProvider
       request.contentLength = data.lengthInBytes;
       request.sink.add(data);
       request.sink.close();
-      final streamedResponse = await request.send();
+      final streamedResponse = await _client.send(request);
       final responseBody = await streamedResponse.stream.bytesToString();
       if (streamedResponse.statusCode < 200 ||
           streamedResponse.statusCode >= 300) {
@@ -97,7 +103,7 @@ abstract class PresignedUrlStorageProvider extends XStorageProvider
   Future<Result<Uint8List, XStorageException>> loadFile(XUri uri) async {
     try {
       final url = await getNetworkUrl(uri);
-      final response = await http.get(url);
+      final response = await _client.get(url);
 
       if (response.statusCode == 200) {
         return Result.success(response.bodyBytes);
@@ -120,7 +126,7 @@ abstract class PresignedUrlStorageProvider extends XStorageProvider
   Future<bool> exists(XUri uri) async {
     try {
       final completeUri = await getNetworkUrl(uri);
-      final response = await http.head(completeUri);
+      final response = await _client.head(completeUri);
       return response.statusCode == 200;
     } catch (e) {
       debugPrint('Error checking file existence: $e');
@@ -132,7 +138,7 @@ abstract class PresignedUrlStorageProvider extends XStorageProvider
   Future<Result<XFileHead, XStorageException>> head(XUri uri) async {
     try {
       final completeUri = await getNetworkUrl(uri);
-      final response = await http.head(completeUri);
+      final response = await _client.head(completeUri);
       if (response.statusCode != 200) {
         return Result.failure(FileNotFoundException(uri));
       }

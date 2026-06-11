@@ -1,3 +1,7 @@
+## 0.4.2
+
+* Reuse a single `http.Client` across `head()` / `exists()` / `loadFile()` / `saveFile()` to keep the TCP/TLS connection alive (large latency reduction for repeated metadata requests such as computing download sizes)
+
 ## 0.4.1
 
 * Implemented `head()` using an HTTP HEAD request (reads `Content-Length` and `Content-Type`)
