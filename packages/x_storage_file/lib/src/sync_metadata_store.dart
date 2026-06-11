@@ -10,6 +10,7 @@ abstract class SyncMetadataStore {
   Future<void> remove(XUri uri);
   Future<List<XUri>> getByStatus(SyncStatus status);
   Future<int> countByStatus(SyncStatus status);
+  Future<List<XUri>> getAll();
 }
 
 /// JSONファイルで永続化する [SyncMetadataStore] 実装
@@ -88,5 +89,11 @@ class JsonSyncMetadataStore extends SyncMetadataStore {
     final data = await _load();
     final statusStr = _statusToString(status);
     return data.values.where((v) => v == statusStr).length;
+  }
+
+  @override
+  Future<List<XUri>> getAll() async {
+    final data = await _load();
+    return data.keys.map((k) => XUri(Uri.parse(k))).toList();
   }
 }

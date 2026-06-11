@@ -116,6 +116,11 @@ class InMemorySyncMetadataStore extends SyncMetadataStore {
   Future<int> countByStatus(SyncStatus status) async {
     return _store.values.where((v) => v == status).length;
   }
+
+  @override
+  Future<List<XUri>> getAll() async {
+    return _store.keys.map((k) => XUri(Uri.parse(k))).toList();
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -427,14 +432,11 @@ void main() {
       remote.shouldFail = false;
       final failCount = await sut.syncAll();
       expect(failCount, 0);
-      expect(
-          await metadata.getStatus(_uri('local.txt')), SyncStatus.synced);
-      expect(
-          await metadata.getStatus(_uri('pending.txt')), SyncStatus.synced);
+      expect(await metadata.getStatus(_uri('local.txt')), SyncStatus.synced);
+      expect(await metadata.getStatus(_uri('pending.txt')), SyncStatus.synced);
       expect(
           await remote.exists(_remoteKey(_uri('local.txt'), 'remote')), isTrue);
-      expect(
-          await remote.exists(_remoteKey(_uri('pending.txt'), 'remote')),
+      expect(await remote.exists(_remoteKey(_uri('pending.txt'), 'remote')),
           isTrue);
     });
 
@@ -573,8 +575,7 @@ void main() {
       final uri = _uri('a.txt');
       await sut.saveFile(uri, _data('hello'));
 
-      expect(
-          await newRemote.exists(_remoteKey(uri, 'new-remote')), isTrue);
+      expect(await newRemote.exists(_remoteKey(uri, 'new-remote')), isTrue);
       expect(await metadata.getStatus(uri), SyncStatus.synced);
     });
   });

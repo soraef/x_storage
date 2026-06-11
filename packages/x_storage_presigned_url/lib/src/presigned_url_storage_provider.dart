@@ -42,14 +42,30 @@ abstract class PresignedUrlStorageProvider extends XStorageProvider
       );
 
       // Upload using PUT request
-      final headers = uploadHeaders(dirs: dirs, filename: filename, contentType: contentType);
-      final response = await http.put(Uri.parse(url), body: data, headers: headers);
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        debugPrint('PUT upload failed: status=${response.statusCode}, body=${response.body}');
+      final headers = uploadHeaders(
+          dirs: dirs, filename: filename, contentType: contentType);
+      debugPrint('[PresignedUrl] PUT $url');
+      debugPrint(
+          '[PresignedUrl] headers=$headers, contentType=$contentType, size=${data.lengthInBytes}');
+      final request = http.StreamedRequest('PUT', Uri.parse(url));
+      if (headers != null) {
+        request.headers.addAll(headers);
+      } else {
+        // headers が null の場合、http パッケージが自動で content-type を付けないようにする
+        request.headers.remove('content-type');
+      }
+      request.contentLength = data.lengthInBytes;
+      request.sink.add(data);
+      request.sink.close();
+      final streamedResponse = await request.send();
+      final responseBody = await streamedResponse.stream.bytesToString();
+      if (streamedResponse.statusCode < 200 ||
+          streamedResponse.statusCode >= 300) {
+        debugPrint(
+            'PUT upload failed: status=${streamedResponse.statusCode}, body=$responseBody');
         return Result.failure(
           HttpException(
-            "Failed to upload file to storage: ${response.statusCode}",
-          ),
+              "Failed to upload file to storage: ${streamedResponse.statusCode}"),
         );
       }
       await onSaveComplete(dirs: dirs, filename: filename);
@@ -165,7 +181,13 @@ abstract class PresignedUrlStorageProvider extends XStorageProvider
       'pdf' => 'application/pdf',
       'mp4' => 'video/mp4',
       'mov' => 'video/quicktime',
-      _ => null,
+      'm4a' => 'audio/mp4',
+      'mp3' => 'audio/mpeg',
+      'aac' => 'audio/aac',
+      'wav' => 'audio/wav',
+      'ogg' => 'audio/ogg',
+      'flac' => 'audio/flac',
+      _ => 'application/octet-stream',
     };
   }
 }

@@ -34,6 +34,9 @@ mixin SyncProviderMixin on XStorageProvider {
   /// 例: synced だがリモートに存在しない → localOnly に変更
   Future<SyncStatus> verifyStatus(XUri uri);
 
+  /// 全ファイルのステータスをリモートに問い合わせて確定させる
+  Future<void> verifyAll();
+
   /// リモートから意図的に削除（ローカルは残す）
   Future<void> removeFromRemote(XUri uri);
 

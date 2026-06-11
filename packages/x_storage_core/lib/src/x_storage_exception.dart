@@ -27,4 +27,7 @@ class UnsupportedOperationException extends XStorageException {
 class UnknownException extends XStorageException {
   final Object error;
   UnknownException(this.error);
+
+  @override
+  String toString() => 'UnknownException($error)';
 }

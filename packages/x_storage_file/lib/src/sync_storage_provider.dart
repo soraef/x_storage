@@ -132,7 +132,9 @@ class SyncStorageProvider extends XStorageProvider
       debugPrint('[SyncStorage] Remote upload success: $uri');
       await _metadataStore.setStatus(uri, SyncStatus.synced);
     } else {
-      debugPrint('[SyncStorage] Remote upload failed: ${remoteResult.failure}');
+      final failure = remoteResult.failure;
+      debugPrint(
+          '[SyncStorage] Remote upload failed: $failure (${failure.runtimeType})');
       await _metadataStore.setStatus(uri, SyncStatus.pendingUpload);
     }
 
@@ -151,8 +153,7 @@ class SyncStorageProvider extends XStorageProvider
     if (remote == null) return localResult;
 
     // 3. ローカルになければリモートから取得
-    final remoteResult =
-        await remote.loadFile(_remoteUri(uri, remote));
+    final remoteResult = await remote.loadFile(_remoteUri(uri, remote));
     if (remoteResult.isFailure) return remoteResult;
 
     // 4. リモートから取得成功 → ローカルに保存
@@ -175,8 +176,7 @@ class SyncStorageProvider extends XStorageProvider
     }
 
     // リモートを試行
-    final remoteResult =
-        await remote.deleteFile(_remoteUri(uri, remote));
+    final remoteResult = await remote.deleteFile(_remoteUri(uri, remote));
     if (remoteResult.isSuccess) {
       await _metadataStore.remove(uri);
     } else {
@@ -202,6 +202,10 @@ class SyncStorageProvider extends XStorageProvider
   @override
   Future<String> getFilePath(XUri uri) => _local.getFilePath(_localUri(uri));
 
+  /// 指定ステータスのファイル URI 一覧を取得
+  Future<List<XUri>> getByStatus(SyncStatus status) =>
+      _metadataStore.getByStatus(status);
+
   // --- SyncProviderMixin ---
 
   @override
@@ -214,8 +218,7 @@ class SyncStorageProvider extends XStorageProvider
   }
 
   @override
-  Future<SyncStatus?> getSyncStatus(XUri uri) =>
-      _metadataStore.getStatus(uri);
+  Future<SyncStatus?> getSyncStatus(XUri uri) => _metadataStore.getStatus(uri);
 
   @override
   Future<int> syncPending() async {
@@ -228,16 +231,24 @@ class SyncStorageProvider extends XStorageProvider
     final pendingUploads =
         await _metadataStore.getByStatus(SyncStatus.pendingUpload);
     for (final uri in pendingUploads) {
-      final localData = await _local.loadFile(_localUri(uri));
+      final localUri = _localUri(uri);
+      final localData = await _local.loadFile(localUri);
       if (localData.isFailure) {
+        debugPrint(
+            '[SyncStorage] syncPending: local load failed for $localUri (${localData.failure})');
         failCount++;
         continue;
       }
-      final result =
-          await remote.saveFile(_remoteUri(uri, remote), localData.success);
+      final remoteUri = _remoteUri(uri, remote);
+      debugPrint(
+          '[SyncStorage] syncPending: uploading $remoteUri (${localData.success.lengthInBytes} bytes)');
+      final result = await remote.saveFile(remoteUri, localData.success);
       if (result.isSuccess) {
+        debugPrint('[SyncStorage] syncPending: upload success $uri');
         await _metadataStore.setStatus(uri, SyncStatus.synced);
       } else {
+        debugPrint(
+            '[SyncStorage] syncPending: upload failed $uri (${result.failure})');
         failCount++;
       }
     }
@@ -246,8 +257,7 @@ class SyncStorageProvider extends XStorageProvider
     final pendingDeletes =
         await _metadataStore.getByStatus(SyncStatus.pendingDelete);
     for (final uri in pendingDeletes) {
-      final result =
-          await remote.deleteFile(_remoteUri(uri, remote));
+      final result = await remote.deleteFile(_remoteUri(uri, remote));
       if (result.isSuccess) {
         await _metadataStore.remove(uri);
       } else {
@@ -259,12 +269,22 @@ class SyncStorageProvider extends XStorageProvider
   }
 
   @override
+  Future<void> verifyAll() async {
+    final remote = _remote;
+    if (remote == null) return;
+
+    final allUris = await _metadataStore.getAll();
+    for (final uri in allUris) {
+      await verifyStatus(uri);
+    }
+  }
+
+  @override
   Future<SyncStatus> verifyStatus(XUri uri) async {
     final remote = _remote;
     if (remote == null) return SyncStatus.localOnly;
 
-    final remoteExists =
-        await remote.exists(_remoteUri(uri, remote));
+    final remoteExists = await remote.exists(_remoteUri(uri, remote));
     final currentStatus = await _metadataStore.getStatus(uri);
 
     if (currentStatus == SyncStatus.synced && !remoteExists) {
