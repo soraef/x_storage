@@ -1,3 +1,9 @@
+## 0.4.1
+
+* Implemented `head()` using an HTTP HEAD request (reads `Content-Length` and `Content-Type`)
+* Upload now uses a streamed PUT request (`http.StreamedRequest`) with explicit content length, and omits `Content-Type` when no upload headers are provided
+* Expanded automatic MIME type detection to cover audio formats (mp3, m4a, aac, wav, ogg, flac) and fall back to `application/octet-stream`
+
 ## 0.4.0
 
 * Added `contentType` and `sizeBytes` parameters to `fetchUploadPresignedUrl`

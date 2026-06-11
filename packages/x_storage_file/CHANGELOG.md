@@ -1,5 +1,6 @@
 ## 0.4.1
 
+* Implemented `head()` using `File.stat()` (size and last modified) without reading the file
 * Added debug logging to `SyncStorageProvider.saveFile` for remote upload results
 
 ## 0.4.0

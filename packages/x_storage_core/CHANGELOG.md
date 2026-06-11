@@ -1,5 +1,6 @@
 ## 0.4.1
 
+* Added `XFileHead` (size / contentType / lastModified) and `XStorageProvider.head()` / `XStorage.head()` to fetch file metadata without downloading the content (default implementation falls back to `loadFile`)
 * Fixed `XUri.changeScheme` producing double leading slashes (e.g. `////path`) by using `Uri.replace` instead of string concatenation
 
 ## 0.4.0

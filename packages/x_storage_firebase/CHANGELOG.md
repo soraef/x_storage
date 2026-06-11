@@ -1,3 +1,7 @@
+## 0.4.1
+
+* Implemented `head()` using Firebase Storage `getMetadata()` (size, contentType, updated)
+
 ## 0.4.0
 
 * Updated to support x_storage_core 0.4.0
