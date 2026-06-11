@@ -1,5 +1,6 @@
 export 'src/x_storage.dart';
 export 'src/x_storage_provider.dart';
+export 'src/x_file_head.dart';
 export 'src/x_uri.dart';
 export 'src/x_storage_type.dart';
 export 'src/x_storage_exception.dart';

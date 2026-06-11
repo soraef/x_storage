@@ -13,6 +13,9 @@ class FileStorageProvider extends XStorageProvider with FileProviderMixin {
   // Dioインスタンス
   final Dio _dio = Dio();
 
+  // アプリサポートディレクトリのキャッシュ
+  String? _cachedDirPath;
+
   @override
   Future<Result<void, XStorageException>> deleteFile(XUri uri) async {
     try {
@@ -69,6 +72,23 @@ class FileStorageProvider extends XStorageProvider with FileProviderMixin {
     final filePath = await getFilePath(uri);
     final file = File(filePath);
     return await file.exists();
+  }
+
+  @override
+  Future<Result<XFileHead, XStorageException>> head(XUri uri) async {
+    try {
+      final filePath = await getFilePath(uri);
+      final file = File(filePath);
+      if (!await file.exists()) {
+        return Result.failure(FileNotFoundException(uri));
+      }
+      final stat = await file.stat();
+      return Result.success(
+        XFileHead(size: stat.size, lastModified: stat.modified),
+      );
+    } catch (e) {
+      return Result.failure(UnknownException(e));
+    }
   }
 
   @override

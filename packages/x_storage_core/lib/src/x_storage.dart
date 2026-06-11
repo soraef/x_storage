@@ -5,6 +5,7 @@ import 'package:cross_file/cross_file.dart';
 import 'package:type_result/type_result.dart';
 
 import 'caching_provider_mixin.dart';
+import 'x_file_head.dart';
 import 'x_storage_exception.dart';
 import 'x_storage_provider.dart';
 import 'x_storage_type.dart';
@@ -173,6 +174,24 @@ class XStorage {
       final provider = providerResult.success;
       final result = await provider.exists(uri);
       return Result.success(result);
+    } catch (e) {
+      return Result.failure(UnknownException(e));
+    }
+  }
+
+  /// Retrieves metadata (size, content type, ...) for the file at [uri].
+  ///
+  /// The appropriate provider is selected based on the URI's scheme. Where the
+  /// backend supports it (e.g. HTTP HEAD), this avoids downloading the file.
+  Future<Result<XFileHead, XStorageException>> head(XUri uri) async {
+    try {
+      final providerResult = getProvider(uri);
+      if (providerResult.isFailure) {
+        return Result.failure(providerResult.failure);
+      }
+
+      final provider = providerResult.success;
+      return await provider.head(uri);
     } catch (e) {
       return Result.failure(UnknownException(e));
     }

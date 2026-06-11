@@ -79,4 +79,22 @@ class FirebaseStorageProvider extends XStorageProvider
       return false;
     }
   }
+
+  @override
+  Future<Result<XFileHead, XStorageException>> head(XUri uri) async {
+    try {
+      final metadata =
+          await firebaseStorage.ref().child(uri.path).getMetadata();
+      return Result.success(
+        XFileHead(
+          size: metadata.size,
+          contentType: metadata.contentType,
+          lastModified: metadata.updated,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error fetching metadata from Firebase Storage: $e');
+      return Result.failure(UnknownException(e));
+    }
+  }
 }

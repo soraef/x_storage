@@ -1,0 +1,4 @@
+# melos_managed_dependency_overrides: x_storage_core
+dependency_overrides:
+  x_storage_core:
+    path: ../x_storage_core

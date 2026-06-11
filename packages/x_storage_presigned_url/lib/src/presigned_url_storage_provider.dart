@@ -129,6 +129,29 @@ abstract class PresignedUrlStorageProvider extends XStorageProvider
   }
 
   @override
+  Future<Result<XFileHead, XStorageException>> head(XUri uri) async {
+    try {
+      final completeUri = await getNetworkUrl(uri);
+      final response = await http.head(completeUri);
+      if (response.statusCode != 200) {
+        return Result.failure(FileNotFoundException(uri));
+      }
+      // http lowercases all header keys.
+      final headers = response.headers;
+      final size = int.tryParse(headers['content-length'] ?? '');
+      return Result.success(
+        XFileHead(
+          size: size,
+          contentType: headers['content-type'],
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error fetching file head: $e');
+      return Result.failure(UnknownException(e));
+    }
+  }
+
+  @override
   Future<Uri> getNetworkUrl(XUri uri) async {
     if (!enableDownloadPresignedUrl) {
       return await super.getNetworkUrl(uri);

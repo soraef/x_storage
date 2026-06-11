@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:type_result/type_result.dart';
+import 'x_file_head.dart';
 import 'x_storage_exception.dart';
 import 'x_storage_type.dart';
 import 'x_uri.dart';
@@ -32,6 +33,21 @@ abstract class XStorageProvider {
   Future<bool> exists(XUri uri) async {
     final result = await loadFile(uri);
     return result.isSuccess;
+  }
+
+  /// Retrieves metadata (size, content type, ...) for the file at [uri]
+  /// without downloading its contents where possible.
+  ///
+  /// Default implementation falls back to [loadFile] and reports only the
+  /// size, which downloads the whole file. Providers should override this
+  /// with a cheaper implementation (e.g. an HTTP HEAD request) when the
+  /// backend supports it.
+  Future<Result<XFileHead, XStorageException>> head(XUri uri) async {
+    final result = await loadFile(uri);
+    if (result.isFailure) {
+      return Result.failure(result.failure);
+    }
+    return Result.success(XFileHead(size: result.success.lengthInBytes));
   }
 
   /// Gets the storage type for this provider

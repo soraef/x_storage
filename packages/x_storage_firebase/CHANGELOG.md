@@ -1,3 +1,7 @@
+## 0.4.0
+
+* Updated to support x_storage_core 0.4.0
+
 ## 0.2.0
 
 * **BREAKING CHANGE**: Updated to support x_storage_core 0.2.0
