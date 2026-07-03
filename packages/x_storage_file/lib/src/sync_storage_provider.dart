@@ -48,6 +48,11 @@ class SyncStorageProvider extends XStorageProvider
 
   bool get hasRemote => _remote != null;
 
+  /// 同期OFF時にリモートを外す。以後の保存はローカルのみ（localOnly）になる。
+  void clearRemote() {
+    _remote = null;
+  }
+
   /// リモートプロバイダーを設定・差し替える
   ///
   /// [resetStatus] が true（デフォルト）の場合:
@@ -284,7 +289,13 @@ class SyncStorageProvider extends XStorageProvider
     final remote = _remote;
     if (remote == null) return SyncStatus.localOnly;
 
-    final remoteExists = await remote.exists(_remoteUri(uri, remote));
+    bool remoteExists;
+    try {
+      remoteExists = await remote.exists(_remoteUri(uri, remote));
+    } catch (_) {
+      // サーバー状態が不明（オフライン等）なので、ステータスを変更せずそのまま返す
+      return await _metadataStore.getStatus(uri) ?? SyncStatus.localOnly;
+    }
     final currentStatus = await _metadataStore.getStatus(uri);
 
     if (currentStatus == SyncStatus.synced && !remoteExists) {

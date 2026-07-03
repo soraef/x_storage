@@ -50,6 +50,7 @@ class FakeRemoteProvider extends XStorageProvider {
 
   final Map<String, Uint8List> store = {};
   bool shouldFail = false;
+  bool existsShouldThrow = false;
 
   FakeRemoteProvider({this.scheme = 'remote'});
 
@@ -81,6 +82,7 @@ class FakeRemoteProvider extends XStorageProvider {
 
   @override
   Future<bool> exists(XUri uri) async {
+    if (existsShouldThrow) throw Exception('network error');
     if (shouldFail) return false;
     return store.containsKey(uri.toString());
   }
@@ -474,6 +476,33 @@ void main() {
       expect(await metadata.getStatus(uri), SyncStatus.synced);
     });
 
+    test(
+        'verifyStatus: remote.exists throws → status kept unchanged (synced)',
+        () async {
+      final uri = _uri('a.txt');
+      await sut.saveFile(uri, _data('hello'));
+      expect(await metadata.getStatus(uri), SyncStatus.synced);
+
+      remote.existsShouldThrow = true;
+
+      final status = await sut.verifyStatus(uri);
+      expect(status, SyncStatus.synced);
+      expect(await metadata.getStatus(uri), SyncStatus.synced);
+    });
+
+    test(
+        'verifyStatus: remote.exists throws → status kept unchanged (localOnly)',
+        () async {
+      final uri = _uri('a.txt');
+      await metadata.setStatus(uri, SyncStatus.localOnly);
+
+      remote.existsShouldThrow = true;
+
+      final status = await sut.verifyStatus(uri);
+      expect(status, SyncStatus.localOnly);
+      expect(await metadata.getStatus(uri), SyncStatus.localOnly);
+    });
+
     // --- removeFromRemote ---
 
     test('removeFromRemote: deletes remote and sets localOnly', () async {
@@ -577,6 +606,32 @@ void main() {
 
       expect(await newRemote.exists(_remoteKey(uri, 'new-remote')), isTrue);
       expect(await metadata.getStatus(uri), SyncStatus.synced);
+    });
+  });
+
+  // =========================================================================
+  // Group 3.5: clearRemote
+  // =========================================================================
+  group('clearRemote', () {
+    test('hasRemote becomes false and saveFile falls back to localOnly',
+        () async {
+      final remote = FakeRemoteProvider();
+      final sut = SyncStorageProvider(
+        scheme: 'sync',
+        local: local,
+        remote: remote,
+        metadataStore: metadata,
+      );
+      expect(sut.hasRemote, isTrue);
+
+      sut.clearRemote();
+      expect(sut.hasRemote, isFalse);
+
+      final uri = _uri('a.txt');
+      final result = await sut.saveFile(uri, _data('hello'));
+      expect(result.isSuccess, isTrue);
+      expect(await metadata.getStatus(uri), SyncStatus.localOnly);
+      expect(await remote.exists(_remoteKey(uri, 'remote')), isFalse);
     });
   });
 
