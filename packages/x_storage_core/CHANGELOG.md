@@ -1,4 +1,4 @@
-## Unreleased
+## 0.5.0
 
 * Added `PublicUrlStorageProvider`: read-only provider for public HTTP(S) URLs (CDN, public R2 bucket). Adds the `http` dependency.
 

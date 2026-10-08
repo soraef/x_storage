@@ -1,6 +1,7 @@
-## Unreleased
+## 0.5.0
 
 * Added `XStorageImageProvider`: an `ImageProvider` that loads through `XStorage.loadFile` (usable with `DecorationImage`, `Image`, `precacheImage`; fills `CachingStorageProvider` caches on first display).
+* Requires `x_storage_core` ^0.5.0 (hosted instead of a path dependency).
 
 ## 0.4.3
 

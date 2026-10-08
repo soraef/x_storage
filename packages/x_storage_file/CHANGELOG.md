@@ -1,3 +1,11 @@
+## 0.5.0
+
+* **Breaking (behaviour):** `SyncStorageProvider.saveFile` is local-first. It completes once the local file and the durable sync intent are written and no longer waits for the upload; uploads run in a separate, serialized pass. Call `syncPending()` on startup/resume and connectivity recovery.
+* Overwriting a file while its previous upload is in flight never marks the newer bytes as synced.
+* Added `SyncStorageProvider.clearRemote()`; `verifyStatus` keeps the stored status when `remote.exists` throws (e.g. offline).
+* `JsonSyncMetadataStore` serializes updates and replaces its JSON file atomically; `FileStorageProvider` writes through a flushed temporary file and rename.
+* Requires `x_storage_core` ^0.5.0.
+
 ## 0.4.1
 
 * Implemented `head()` using `File.stat()` (size and last modified) without reading the file

@@ -1,3 +1,10 @@
+## 0.5.0
+
+* **Breaking:** `fetchUploadPresignedUrl` returns a `PresignedUploadTarget` (url, HTTP method, optional signed headers) instead of a `String`. Signed headers are sent verbatim (except Content-Length); without them the overridable `uploadHeaders()` is used as before.
+* A 412 response to an upload signed with `If-None-Match` is treated as already uploaded, so a retry after a failed `onSaveComplete` succeeds.
+* Upload failures are logged per stage (url-fetch / put / complete); `uploadHttpClient` can be overridden to inject a client.
+* Requires `x_storage_core` ^0.5.0.
+
 ## 0.4.2
 
 * Reuse a single `http.Client` across `head()` / `exists()` / `loadFile()` / `saveFile()` to keep the TCP/TLS connection alive (large latency reduction for repeated metadata requests such as computing download sizes)
