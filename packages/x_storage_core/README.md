@@ -57,6 +57,17 @@ The XStorage ecosystem offers these storage providers:
 - **FirebaseStorageProvider**: For Firebase Storage (`x_storage_firebase` package)
 - **PresignedUrlStorageProvider**: For storage services that use presigned URLs like AWS S3 (`x_storage_presigned_url` package)
 - **AssetStorageProvider**: For Flutter assets (included in this package)
+- **PublicUrlStorageProvider**: Read-only access to public HTTP(S) URLs such as a CDN or a public Cloudflare R2 bucket (included in this package). `scheme:///path` is read from `<rootUrl>/path`. Wrap it in `CachingStorageProvider` (`x_storage_file`) to keep files on the device across launches:
+
+  ```dart
+  storage.registerProvider(CachingStorageProvider(
+    delegate: PublicUrlStorageProvider(
+      scheme: 'cdn',
+      rootUrl: 'https://pub-xxxx.r2.dev',
+    ),
+    cache: FileStorageProvider(),
+  ));
+  ```
 
 ## Getting Started
 

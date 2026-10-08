@@ -3,6 +3,7 @@ import 'package:x_storage_core/x_storage_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:type_result/type_result.dart';
 
+import 'presigned_upload_target.dart';
 import 'presigned_url_storage_exception.dart';
 
 /// Abstract provider for storage services that use Presigned URLs for upload/download
@@ -32,54 +33,116 @@ abstract class PresignedUrlStorageProvider extends XStorageProvider
     XUri uri,
     Uint8List data,
   ) async {
-    try {
-      // Extract filename and directories from uri.pathSegments
-      final pathSegments = uri.pathSegments;
-      final filename = pathSegments.last;
-      final dirs = pathSegments.sublist(0, pathSegments.length - 1);
+    // Extract filename and directories from uri.pathSegments
+    final pathSegments = uri.pathSegments;
+    final filename = pathSegments.last;
+    final dirs = pathSegments.sublist(0, pathSegments.length - 1);
+    final contentType = _mimeFromExtension(filename);
 
-      // Get the Presigned URL for upload
-      final contentType = _mimeFromExtension(filename);
-      final url = await fetchUploadPresignedUrl(
+    // --- stage: url-fetch ---
+    final PresignedUploadTarget target;
+    try {
+      target = await fetchUploadPresignedUrl(
         dirs: dirs,
         filename: filename,
         sizeBytes: data.lengthInBytes,
         contentType: contentType,
       );
-
-      // Upload using PUT request
-      final headers = uploadHeaders(
-          dirs: dirs, filename: filename, contentType: contentType);
-      debugPrint('[PresignedUrl] PUT $url');
-      debugPrint(
-          '[PresignedUrl] headers=$headers, contentType=$contentType, size=${data.lengthInBytes}');
-      final request = http.StreamedRequest('PUT', Uri.parse(url));
-      if (headers != null) {
-        request.headers.addAll(headers);
-      } else {
-        // headers が null の場合、http パッケージが自動で content-type を付けないようにする
-        request.headers.remove('content-type');
-      }
-      request.contentLength = data.lengthInBytes;
-      request.sink.add(data);
-      request.sink.close();
-      final streamedResponse = await _client.send(request);
-      final responseBody = await streamedResponse.stream.bytesToString();
-      if (streamedResponse.statusCode < 200 ||
-          streamedResponse.statusCode >= 300) {
-        debugPrint(
-            'PUT upload failed: status=${streamedResponse.statusCode}, body=$responseBody');
-        return Result.failure(
-          HttpException(
-              "Failed to upload file to storage: ${streamedResponse.statusCode}"),
-        );
-      }
-      await onSaveComplete(dirs: dirs, filename: filename);
-      return Result.success(null);
     } catch (e) {
+      debugPrint(
+          '[PresignedUrl] stage=url-fetch failed uri=$uri filename=$filename error=$e');
       return Result.failure(UnknownException(e));
     }
+
+    // --- stage: put ---
+    Map<String, String>? appliedHeaders;
+    try {
+      final request =
+          http.StreamedRequest(target.method, Uri.parse(target.url));
+
+      final serverHeaders = target.headers;
+      if (serverHeaders != null) {
+        // Server (presigned URL signer) supplied headers: send them
+        // verbatim, they are part of the request signature. The one
+        // exception is Content-Length, which cannot be set through the
+        // headers map on http.StreamedRequest — it must be set via
+        // request.contentLength instead.
+        appliedHeaders = Map<String, String>.from(serverHeaders)
+          ..removeWhere((key, _) => key.toLowerCase() == 'content-length');
+        request.headers.addAll(appliedHeaders);
+      } else {
+        // Legacy behavior: providers that don't return headers alongside
+        // the presigned URL fall back to the overridable uploadHeaders().
+        appliedHeaders = uploadHeaders(
+            dirs: dirs, filename: filename, contentType: contentType);
+        if (appliedHeaders != null) {
+          request.headers.addAll(appliedHeaders);
+        } else {
+          // headers が null の場合、http パッケージが自動で content-type を付けないようにする
+          request.headers.remove('content-type');
+        }
+      }
+      request.contentLength = data.lengthInBytes;
+
+      debugPrint('[PresignedUrl] ${target.method} ${target.url}');
+      debugPrint(
+          '[PresignedUrl] headers=$appliedHeaders, contentType=$contentType, size=${data.lengthInBytes}');
+
+      request.sink.add(data);
+      request.sink.close();
+      final streamedResponse =
+          await (uploadHttpClient ?? _client).send(request);
+      final responseBody = await streamedResponse.stream.bytesToString();
+      final status = streamedResponse.statusCode;
+
+      final hasIfNoneMatch = appliedHeaders?.keys
+              .any((key) => key.toLowerCase() == 'if-none-match') ??
+          false;
+
+      if (status == 412 && hasIfNoneMatch) {
+        // R2 presigned PUTs are signed with `If-None-Match: *`, so a retry
+        // after a successful PUT but a failed `complete` call will get a
+        // 412 here because the object already exists. The object key is
+        // unique per upload operation and R2 PUTs are atomic, so a 412
+        // with If-None-Match applied means the earlier PUT already
+        // succeeded — treat it as such and proceed to onSaveComplete
+        // (the server verifies size at complete time).
+        debugPrint(
+            '[PresignedUrl] stage=put status=412 uri=$uri filename=$filename note=object already uploaded (If-None-Match precondition failed); treating as success and proceeding to complete');
+      } else if (status < 200 || status >= 300) {
+        debugPrint(
+            '[PresignedUrl] stage=put failed status=$status uri=$uri filename=$filename body=$responseBody');
+        return Result.failure(
+          HttpException("Failed to upload file to storage: $status"),
+        );
+      }
+    } catch (e) {
+      debugPrint(
+          '[PresignedUrl] stage=put failed uri=$uri filename=$filename error=$e');
+      return Result.failure(UnknownException(e));
+    }
+
+    // --- stage: complete ---
+    try {
+      await onSaveComplete(dirs: dirs, filename: filename);
+    } catch (e) {
+      debugPrint(
+          '[PresignedUrl] stage=complete failed uri=$uri filename=$filename error=$e');
+      return Result.failure(UnknownException(e));
+    }
+
+    return Result.success(null);
   }
+
+  /// Optional [http.Client] used to send the upload request to the
+  /// presigned URL. When null (the default), the provider's shared client is
+  /// used, so uploads reuse the same keep-alive connection as other requests.
+  ///
+  /// Override to inject a client — e.g. for testing with
+  /// `package:http/testing.dart`'s `MockClient`, or to share a client
+  /// instance with the rest of the provider.
+  @protected
+  http.Client? get uploadHttpClient => null;
 
   /// Returns headers for the PUT upload request.
   /// Override to add custom headers (e.g., Content-Type for presigned URL matching).
@@ -180,8 +243,9 @@ abstract class PresignedUrlStorageProvider extends XStorageProvider
   /// [sizeBytes] is the size of the file in bytes (optional)
   /// [contentType] is the MIME type of the file (optional)
   ///
-  /// Returns a Presigned URL that can be used to upload the file using a PUT request
-  Future<String> fetchUploadPresignedUrl({
+  /// Returns a [PresignedUploadTarget] describing the URL, HTTP method, and
+  /// (optionally) the exact headers that must be sent to upload the file.
+  Future<PresignedUploadTarget> fetchUploadPresignedUrl({
     required List<String> dirs,
     required String filename,
     int? sizeBytes,

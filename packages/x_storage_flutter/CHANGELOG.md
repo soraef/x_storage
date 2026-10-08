@@ -1,3 +1,7 @@
+## Unreleased
+
+* Added `XStorageImageProvider`: an `ImageProvider` that loads through `XStorage.loadFile` (usable with `DecorationImage`, `Image`, `precacheImage`; fills `CachingStorageProvider` caches on first display).
+
 ## 0.4.3
 
 * Added `alignment` support to `XStorageImage`.

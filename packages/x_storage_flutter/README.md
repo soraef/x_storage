@@ -50,6 +50,28 @@ XStorageImage(
 )
 ```
 
+### ImageProvider
+
+`XStorageImageProvider` reads the image through `XStorage.loadFile`, so it works
+anywhere an `ImageProvider` is accepted (`DecorationImage`, `Image` with
+`frameBuilder` / `errorBuilder`, `precacheImage`). With `CachingStorageProvider`,
+the first display saves the file to the device cache.
+
+```dart
+DecoratedBox(
+  decoration: BoxDecoration(
+    color: Colors.pink.shade50, // shown while loading or on failure
+    image: DecorationImage(
+      image: XStorageImageProvider(
+        XUri.create('cdn', 'backgrounds/cafe.webp'),
+        storage,
+      ),
+      fit: BoxFit.cover,
+    ),
+  ),
+)
+```
+
 ### Audio Playback
 
 ```dart

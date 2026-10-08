@@ -281,9 +281,10 @@ void main() {
 
     // --- saveFile ---
 
-    test('saveFile: remote success → synced', () async {
+    test('saveFile followed by syncPending uploads the local file', () async {
       final uri = _uri('a.txt');
       final result = await sut.saveFile(uri, _data('hello'));
+      await sut.syncPending();
 
       expect(result.isSuccess, isTrue);
       expect(await local.exists(_localKey(uri)), isTrue);
@@ -295,6 +296,7 @@ void main() {
       remote.shouldFail = true;
       final uri = _uri('a.txt');
       final result = await sut.saveFile(uri, _data('hello'));
+      await sut.syncPending();
 
       expect(result.isSuccess, isTrue); // local succeeded
       expect(await local.exists(_localKey(uri)), isTrue);
@@ -306,6 +308,7 @@ void main() {
     test('loadFile: local hit → returns local data', () async {
       final uri = _uri('a.txt');
       await sut.saveFile(uri, _data('hello'));
+      await sut.syncPending();
 
       final result = await sut.loadFile(uri);
       expect(result.isSuccess, isTrue);
@@ -337,8 +340,10 @@ void main() {
     test('deleteFile: remote success → metadata removed', () async {
       final uri = _uri('a.txt');
       await sut.saveFile(uri, _data('hello'));
+      await sut.syncPending();
 
       final result = await sut.deleteFile(uri);
+      await sut.syncPending();
       expect(result.isSuccess, isTrue);
       expect(await local.exists(_localKey(uri)), isFalse);
       expect(await remote.exists(_remoteKey(uri, 'remote')), isFalse);
@@ -348,9 +353,11 @@ void main() {
     test('deleteFile: remote failure → pendingDelete', () async {
       final uri = _uri('a.txt');
       await sut.saveFile(uri, _data('hello'));
+      await sut.syncPending();
 
       remote.shouldFail = true;
       final result = await sut.deleteFile(uri);
+      await sut.syncPending();
       expect(result.isSuccess, isTrue); // local succeeded
       expect(await metadata.getStatus(uri), SyncStatus.pendingDelete);
     });
@@ -360,6 +367,7 @@ void main() {
     test('exists: local true → true', () async {
       final uri = _uri('a.txt');
       await sut.saveFile(uri, _data('hello'));
+      await sut.syncPending();
       expect(await sut.exists(uri), isTrue);
     });
 
@@ -380,6 +388,7 @@ void main() {
       final uri = _uri('a.txt');
       remote.shouldFail = true;
       await sut.saveFile(uri, _data('hello'));
+      await sut.syncPending();
       expect(await metadata.getStatus(uri), SyncStatus.pendingUpload);
 
       remote.shouldFail = false;
@@ -392,6 +401,7 @@ void main() {
     test('syncPending: deletes pendingDelete files', () async {
       final uri = _uri('a.txt');
       await sut.saveFile(uri, _data('hello'));
+      await sut.syncPending();
 
       remote.shouldFail = true;
       await sut.deleteFile(uri);
@@ -407,7 +417,9 @@ void main() {
     test('syncPending: returns failure count', () async {
       remote.shouldFail = true;
       await sut.saveFile(_uri('a.txt'), _data('a'));
+      await sut.syncPending();
       await sut.saveFile(_uri('b.txt'), _data('b'));
+      await sut.syncPending();
       // both are pendingUpload, remote still failing
       final failCount = await sut.syncPending();
       expect(failCount, 2);
@@ -428,6 +440,7 @@ void main() {
       // Create a pendingUpload file
       remote.shouldFail = true;
       await sut.saveFile(_uri('pending.txt'), _data('pending'));
+      await sut.syncPending();
       expect(await metadata.getStatus(_uri('pending.txt')),
           SyncStatus.pendingUpload);
 
@@ -445,6 +458,7 @@ void main() {
     test('syncAll: returns failure count', () async {
       remote.shouldFail = true;
       await sut.saveFile(_uri('a.txt'), _data('a'));
+      await sut.syncPending();
       // remote still failing
       final failCount = await sut.syncAll();
       expect(failCount, 1);
@@ -455,6 +469,7 @@ void main() {
     test('verifyStatus: synced but remote missing → localOnly', () async {
       final uri = _uri('a.txt');
       await sut.saveFile(uri, _data('hello'));
+      await sut.syncPending();
       expect(await metadata.getStatus(uri), SyncStatus.synced);
 
       // Remove from remote behind the scenes
@@ -476,11 +491,11 @@ void main() {
       expect(await metadata.getStatus(uri), SyncStatus.synced);
     });
 
-    test(
-        'verifyStatus: remote.exists throws → status kept unchanged (synced)',
+    test('verifyStatus: remote.exists throws → status kept unchanged (synced)',
         () async {
       final uri = _uri('a.txt');
       await sut.saveFile(uri, _data('hello'));
+      await sut.syncPending();
       expect(await metadata.getStatus(uri), SyncStatus.synced);
 
       remote.existsShouldThrow = true;
@@ -508,6 +523,7 @@ void main() {
     test('removeFromRemote: deletes remote and sets localOnly', () async {
       final uri = _uri('a.txt');
       await sut.saveFile(uri, _data('hello'));
+      await sut.syncPending();
       expect(await remote.exists(_remoteKey(uri, 'remote')), isTrue);
 
       await sut.removeFromRemote(uri);
@@ -603,6 +619,7 @@ void main() {
 
       final uri = _uri('a.txt');
       await sut.saveFile(uri, _data('hello'));
+      await sut.syncPending();
 
       expect(await newRemote.exists(_remoteKey(uri, 'new-remote')), isTrue);
       expect(await metadata.getStatus(uri), SyncStatus.synced);
@@ -629,6 +646,7 @@ void main() {
 
       final uri = _uri('a.txt');
       final result = await sut.saveFile(uri, _data('hello'));
+      await sut.syncPending();
       expect(result.isSuccess, isTrue);
       expect(await metadata.getStatus(uri), SyncStatus.localOnly);
       expect(await remote.exists(_remoteKey(uri, 'remote')), isFalse);

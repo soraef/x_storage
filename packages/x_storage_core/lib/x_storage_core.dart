@@ -9,3 +9,4 @@ export 'src/caching_provider_mixin.dart';
 export 'src/sync_provider_mixin.dart';
 
 export 'src/providers/asset_storage_provider.dart';
+export 'src/providers/public_url_storage_provider.dart';

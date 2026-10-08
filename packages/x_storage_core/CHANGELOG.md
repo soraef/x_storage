@@ -1,3 +1,7 @@
+## Unreleased
+
+* Added `PublicUrlStorageProvider`: read-only provider for public HTTP(S) URLs (CDN, public R2 bucket). Adds the `http` dependency.
+
 ## 0.4.1
 
 * Added `XFileHead` (size / contentType / lastModified) and `XStorageProvider.head()` / `XStorage.head()` to fetch file metadata without downloading the content (default implementation falls back to `loadFile`)

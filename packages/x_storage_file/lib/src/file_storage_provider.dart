@@ -60,7 +60,14 @@ class FileStorageProvider extends XStorageProvider with FileProviderMixin {
         await parentDir.create(recursive: true);
       }
 
-      await file.writeAsBytes(data);
+      final staging = await Directory(parentDir.path).createTemp('.xstorage-');
+      try {
+        final temporary = File('${staging.path}/data');
+        await temporary.writeAsBytes(data, flush: true);
+        await temporary.rename(filePath);
+      } finally {
+        await staging.delete(recursive: true);
+      }
       return Result.success(null);
     } catch (e) {
       return Result.failure(UnknownException(e));

@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:type_result/type_result.dart';
@@ -7,25 +7,9 @@ import 'package:x_storage_core/x_storage_core.dart';
 import 'file_storage_provider.dart';
 import 'sync_metadata_store.dart';
 
-/// ローカルが正、リモートがバックアップ/同期先となるストレージプロバイダー
-///
-/// - `saveFile`: ローカル保存 → リモート試行 → 成功: synced / 失敗: pendingUpload
-/// - `loadFile`: ローカル → 失敗ならリモート → ローカルに保存、synced に設定
-/// - `deleteFile`: ローカル削除 → リモート試行 → 成功: メタデータ除去 / 失敗: pendingDelete
-///
-/// リモート操作は await するがエラーは飲み込み、常にローカル操作の結果を返す。
-/// リモートはオプショナル。未設定時はローカルのみで動作し、後から [setRemote] で追加可能。
-///
-/// 例:
-/// ```dart
-/// final syncProvider = SyncStorageProvider(
-///   scheme: 'synced',
-///   local: fileProvider,
-///   remote: firebaseProvider,
-///   metadataStore: JsonSyncMetadataStore(filePath: '...'),
-/// );
-/// storage.registerProvider(syncProvider);
-/// ```
+/// Local writes finish after durable local data and sync intent are stored.
+/// Network operations run separately through syncPending/syncAll. Applications
+/// should call those methods again on startup, resume and connectivity recovery.
 class SyncStorageProvider extends XStorageProvider
     with FileProviderMixin, SyncProviderMixin {
   @override
@@ -34,6 +18,38 @@ class SyncStorageProvider extends XStorageProvider
   final FileStorageProvider _local;
   XStorageProvider? _remote;
   final SyncMetadataStore _metadataStore;
+  Future<void> _localTail = Future.value();
+  Future<void> _remoteTail = Future.value();
+  final Map<String, int> _revisions = {};
+  int _remoteGeneration = 0;
+  bool _syncScheduled = false;
+
+  Future<T> _locally<T>(Future<T> Function() action) {
+    final result = _localTail.then((_) => action());
+    _localTail =
+        result.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    return result;
+  }
+
+  Future<T> _remotely<T>(Future<T> Function() action) {
+    final result = _remoteTail.then((_) => action());
+    _remoteTail =
+        result.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    return result;
+  }
+
+  void _scheduleSync() {
+    if (_remote == null || _syncScheduled) return;
+    _syncScheduled = true;
+    unawaited(Future<void>(() async {
+      _syncScheduled = false;
+      try {
+        await syncPending();
+      } catch (error) {
+        debugPrint('[SyncStorage] Deferred sync failed: $error');
+      }
+    }));
+  }
 
   SyncStorageProvider({
     required this.scheme,
@@ -50,6 +66,7 @@ class SyncStorageProvider extends XStorageProvider
 
   /// 同期OFF時にリモートを外す。以後の保存はローカルのみ（localOnly）になる。
   void clearRemote() {
+    _remoteGeneration++;
     _remote = null;
   }
 
@@ -61,6 +78,7 @@ class SyncStorageProvider extends XStorageProvider
   /// - `pendingUpload` → そのまま（アップロードが必要な事実は変わらない）
   Future<void> setRemote(XStorageProvider remote,
       {bool resetStatus = true}) async {
+    _remoteGeneration++;
     _remote = remote;
 
     if (!resetStatus) return;
@@ -79,34 +97,7 @@ class SyncStorageProvider extends XStorageProvider
 
   /// `localOnly` + `pendingUpload` のファイルをすべてリモートにアップロード。
   /// 戻り値 = 失敗数。リモート未設定時は 0 を返す。
-  Future<int> syncAll() async {
-    final remote = _remote;
-    if (remote == null) return 0;
-
-    int failCount = 0;
-
-    final targets = [
-      ...await _metadataStore.getByStatus(SyncStatus.localOnly),
-      ...await _metadataStore.getByStatus(SyncStatus.pendingUpload),
-    ];
-
-    for (final uri in targets) {
-      final localData = await _local.loadFile(_localUri(uri));
-      if (localData.isFailure) {
-        failCount++;
-        continue;
-      }
-      final result =
-          await remote.saveFile(_remoteUri(uri, remote), localData.success);
-      if (result.isSuccess) {
-        await _metadataStore.setStatus(uri, SyncStatus.synced);
-      } else {
-        failCount++;
-      }
-    }
-
-    return failCount;
-  }
+  Future<int> syncAll() => _remotely(() => _sync(includeLocalOnly: true));
 
   // --- URI変換 ---
 
@@ -119,80 +110,81 @@ class SyncStorageProvider extends XStorageProvider
   @override
   Future<Result<void, XStorageException>> saveFile(
       XUri uri, Uint8List data) async {
-    // ローカルに保存
-    final localResult = await _local.saveFile(_localUri(uri), data);
-    if (localResult.isFailure) return localResult;
-
-    final remote = _remote;
-    if (remote == null) {
-      await _metadataStore.setStatus(uri, SyncStatus.localOnly);
-      return localResult;
+    try {
+      final result = await _locally(() async {
+        _revisions.update(uri.toString(), (v) => v + 1, ifAbsent: () => 1);
+        // Write intent first. If the process dies after the atomic file write,
+        // a fresh provider can still discover the file without an app job.
+        await _metadataStore.setStatus(uri,
+            _remote == null ? SyncStatus.localOnly : SyncStatus.pendingUpload);
+        return _local.saveFile(_localUri(uri), data);
+      });
+      if (result.isSuccess) _scheduleSync();
+      return result;
+    } catch (error) {
+      return Result.failure(UnknownException(error));
     }
-
-    // リモートに試行
-    final remoteUri = _remoteUri(uri, remote);
-    debugPrint('[SyncStorage] Uploading to remote: $remoteUri');
-    final remoteResult = await remote.saveFile(remoteUri, data);
-    if (remoteResult.isSuccess) {
-      debugPrint('[SyncStorage] Remote upload success: $uri');
-      await _metadataStore.setStatus(uri, SyncStatus.synced);
-    } else {
-      final failure = remoteResult.failure;
-      debugPrint(
-          '[SyncStorage] Remote upload failed: $failure (${failure.runtimeType})');
-      await _metadataStore.setStatus(uri, SyncStatus.pendingUpload);
-    }
-
-    // 常に成功を返す（ローカル保存は成功している）
-    return localResult;
   }
 
   @override
   Future<Result<Uint8List, XStorageException>> loadFile(XUri uri) async {
-    // 1. ローカルから読み込み
-    final localResult = await _local.loadFile(_localUri(uri));
-    if (localResult.isSuccess) return localResult;
-
-    // 2. リモート未設定ならローカル結果をそのまま返す
+    final local = await _locally(() async {
+      if (await _metadataStore.getStatus(uri) == SyncStatus.pendingDelete) {
+        return Result<Uint8List, XStorageException>.failure(
+            FileNotFoundException(uri));
+      }
+      return _local.loadFile(_localUri(uri));
+    });
+    if (local.isSuccess) return local;
     final remote = _remote;
-    if (remote == null) return localResult;
-
-    // 3. ローカルになければリモートから取得
-    final remoteResult = await remote.loadFile(_remoteUri(uri, remote));
-    if (remoteResult.isFailure) return remoteResult;
-
-    // 4. リモートから取得成功 → ローカルに保存
-    final data = remoteResult.success;
-    await _local.saveFile(_localUri(uri), data);
-    await _metadataStore.setStatus(uri, SyncStatus.synced);
-
-    return remoteResult;
+    final generation = _remoteGeneration;
+    if (remote == null ||
+        await _metadataStore.getStatus(uri) == SyncStatus.pendingDelete) {
+      return local;
+    }
+    final downloaded = await remote.loadFile(_remoteUri(uri, remote));
+    if (downloaded.isFailure) return downloaded;
+    return _locally(() async {
+      // A local edit/deletion that happened during download always wins.
+      if (await _metadataStore.getStatus(uri) == SyncStatus.pendingDelete ||
+          generation != _remoteGeneration) {
+        return Result<Uint8List, XStorageException>.failure(
+            FileNotFoundException(uri));
+      }
+      final latest = await _local.loadFile(_localUri(uri));
+      if (latest.isSuccess) return latest;
+      final saved = await _local.saveFile(_localUri(uri), downloaded.success);
+      if (saved.isSuccess) {
+        await _metadataStore.setStatus(uri, SyncStatus.synced);
+      }
+      return downloaded;
+    });
   }
 
   @override
   Future<Result<void, XStorageException>> deleteFile(XUri uri) async {
-    // ローカルを削除
-    final localResult = await _local.deleteFile(_localUri(uri));
-
-    final remote = _remote;
-    if (remote == null) {
-      await _metadataStore.remove(uri);
-      return localResult;
+    try {
+      final result = await _locally(() async {
+        _revisions.update(uri.toString(), (v) => v + 1, ifAbsent: () => 1);
+        await _metadataStore.setStatus(uri, SyncStatus.pendingDelete);
+        final result = await _local.deleteFile(_localUri(uri));
+        if (result.isSuccess && _remote == null) {
+          await _metadataStore.remove(uri);
+        }
+        return result;
+      });
+      if (result.isSuccess) _scheduleSync();
+      return result;
+    } catch (error) {
+      return Result.failure(UnknownException(error));
     }
-
-    // リモートを試行
-    final remoteResult = await remote.deleteFile(_remoteUri(uri, remote));
-    if (remoteResult.isSuccess) {
-      await _metadataStore.remove(uri);
-    } else {
-      await _metadataStore.setStatus(uri, SyncStatus.pendingDelete);
-    }
-
-    return localResult;
   }
 
   @override
   Future<bool> exists(XUri uri) async {
+    if (await _metadataStore.getStatus(uri) == SyncStatus.pendingDelete) {
+      return false;
+    }
     // ローカル確認
     if (await _local.exists(_localUri(uri))) return true;
     // リモート未設定ならfalse
@@ -226,51 +218,72 @@ class SyncStorageProvider extends XStorageProvider
   Future<SyncStatus?> getSyncStatus(XUri uri) => _metadataStore.getStatus(uri);
 
   @override
-  Future<int> syncPending() async {
-    final remote = _remote;
-    if (remote == null) return 0;
+  Future<int> syncPending() => _remotely(() => _sync(includeLocalOnly: false));
 
-    int failCount = 0;
-
-    // pendingUpload を処理
-    final pendingUploads =
-        await _metadataStore.getByStatus(SyncStatus.pendingUpload);
-    for (final uri in pendingUploads) {
-      final localUri = _localUri(uri);
-      final localData = await _local.loadFile(localUri);
-      if (localData.isFailure) {
-        debugPrint(
-            '[SyncStorage] syncPending: local load failed for $localUri (${localData.failure})');
-        failCount++;
-        continue;
-      }
-      final remoteUri = _remoteUri(uri, remote);
-      debugPrint(
-          '[SyncStorage] syncPending: uploading $remoteUri (${localData.success.lengthInBytes} bytes)');
-      final result = await remote.saveFile(remoteUri, localData.success);
-      if (result.isSuccess) {
-        debugPrint('[SyncStorage] syncPending: upload success $uri');
-        await _metadataStore.setStatus(uri, SyncStatus.synced);
-      } else {
-        debugPrint(
-            '[SyncStorage] syncPending: upload failed $uri (${result.failure})');
-        failCount++;
-      }
+  Future<int> _sync({required bool includeLocalOnly}) async {
+    final targets = await _locally(() async => [
+          ...await _metadataStore.getByStatus(SyncStatus.pendingUpload),
+          ...await _metadataStore.getByStatus(SyncStatus.pendingDelete),
+          if (includeLocalOnly)
+            ...await _metadataStore.getByStatus(SyncStatus.localOnly),
+        ]);
+    var failures = 0;
+    for (final uri in targets.toSet()) {
+      if (_remote == null) break;
+      if ((await _transfer(uri)).isFailure) failures++;
     }
+    return failures;
+  }
 
-    // pendingDelete を処理
-    final pendingDeletes =
-        await _metadataStore.getByStatus(SyncStatus.pendingDelete);
-    for (final uri in pendingDeletes) {
-      final result = await remote.deleteFile(_remoteUri(uri, remote));
-      if (result.isSuccess) {
-        await _metadataStore.remove(uri);
-      } else {
-        failCount++;
+  Future<Result<void, XStorageException>> _transfer(XUri uri) async {
+    try {
+      final remote = _remote;
+      if (remote == null) {
+        return Result.failure(
+            UnsupportedOperationException('remote is not set'));
       }
+      final generation = _remoteGeneration;
+      final snapshot = await _locally(() async {
+        final status = await _metadataStore.getStatus(uri);
+        final revision = _revisions[uri.toString()] ?? 0;
+        if (status == SyncStatus.pendingDelete) {
+          final removed = await _local.deleteFile(_localUri(uri));
+          if (removed.isFailure) throw removed.failure;
+          return (status: status, revision: revision, data: null as Uint8List?);
+        }
+        final data = await _local.loadFile(_localUri(uri));
+        if (data.isFailure) throw data.failure;
+        // Explicit upload also needs durable intent before any network call.
+        await _metadataStore.setStatus(uri, SyncStatus.pendingUpload);
+        return (
+          status: SyncStatus.pendingUpload,
+          revision: revision,
+          data: data.success as Uint8List?
+        );
+      });
+      if (_remoteGeneration != generation) {
+        return Result.failure(UnsupportedOperationException('remote changed'));
+      }
+      final result = snapshot.status == SyncStatus.pendingDelete
+          ? await remote.deleteFile(_remoteUri(uri, remote))
+          : await remote.saveFile(_remoteUri(uri, remote), snapshot.data!);
+      if (result.isSuccess) {
+        await _locally(() async {
+          if (_remoteGeneration != generation ||
+              (_revisions[uri.toString()] ?? 0) != snapshot.revision) {
+            return;
+          }
+          if (snapshot.status == SyncStatus.pendingDelete) {
+            await _metadataStore.remove(uri);
+          } else {
+            await _metadataStore.setStatus(uri, SyncStatus.synced);
+          }
+        });
+      }
+      return result;
+    } catch (error) {
+      return Result.failure(UnknownException(error));
     }
-
-    return failCount;
   }
 
   @override
@@ -321,22 +334,6 @@ class SyncStorageProvider extends XStorageProvider
   }
 
   @override
-  Future<Result<void, XStorageException>> uploadToRemote(XUri uri) async {
-    final remote = _remote;
-    if (remote == null) {
-      return Result.failure(
-        UnsupportedOperationException('remote is not set'),
-      );
-    }
-
-    final localData = await _local.loadFile(_localUri(uri));
-    if (localData.isFailure) return Result.failure(localData.failure);
-
-    final result =
-        await remote.saveFile(_remoteUri(uri, remote), localData.success);
-    if (result.isSuccess) {
-      await _metadataStore.setStatus(uri, SyncStatus.synced);
-    }
-    return result;
-  }
+  Future<Result<void, XStorageException>> uploadToRemote(XUri uri) =>
+      _remotely(() => _transfer(uri));
 }

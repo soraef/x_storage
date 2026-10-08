@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -19,6 +20,13 @@ abstract class SyncMetadataStore {
 class JsonSyncMetadataStore extends SyncMetadataStore {
   final String filePath;
   Map<String, String>? _cache;
+  Future<void> _tail = Future.value();
+
+  Future<T> _serialized<T>(Future<T> Function() action) {
+    final operation = _tail.then((_) => action());
+    _tail = operation.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    return operation;
+  }
 
   JsonSyncMetadataStore({required this.filePath});
 
@@ -41,7 +49,9 @@ class JsonSyncMetadataStore extends SyncMetadataStore {
     if (!await parent.exists()) {
       await parent.create(recursive: true);
     }
-    await file.writeAsString(jsonEncode(_cache));
+    final temporary = File('$filePath.writing');
+    await temporary.writeAsString(jsonEncode(_cache), flush: true);
+    await temporary.rename(filePath);
   }
 
   String _key(XUri uri) => uri.toString();
@@ -53,47 +63,57 @@ class JsonSyncMetadataStore extends SyncMetadataStore {
   }
 
   @override
-  Future<void> setStatus(XUri uri, SyncStatus status) async {
-    final data = await _load();
-    data[_key(uri)] = _statusToString(status);
-    await _save();
-  }
+  Future<void> setStatus(XUri uri, SyncStatus status) => _serialized(() async {
+        final data = await _load();
+        data[_key(uri)] = _statusToString(status);
+        try {
+          await _save();
+        } catch (_) {
+          _cache = null;
+          rethrow;
+        }
+      });
 
   @override
-  Future<SyncStatus?> getStatus(XUri uri) async {
-    final data = await _load();
-    final value = data[_key(uri)];
-    if (value == null) return null;
-    return _statusFromString(value);
-  }
+  Future<SyncStatus?> getStatus(XUri uri) => _serialized(() async {
+        final data = await _load();
+        final value = data[_key(uri)];
+        if (value == null) return null;
+        return _statusFromString(value);
+      });
 
   @override
-  Future<void> remove(XUri uri) async {
-    final data = await _load();
-    data.remove(_key(uri));
-    await _save();
-  }
+  Future<void> remove(XUri uri) => _serialized(() async {
+        final data = await _load();
+        data.remove(_key(uri));
+        try {
+          await _save();
+        } catch (_) {
+          _cache = null;
+          rethrow;
+        }
+      });
 
   @override
-  Future<List<XUri>> getByStatus(SyncStatus status) async {
-    final data = await _load();
-    final statusStr = _statusToString(status);
-    return data.entries
-        .where((e) => e.value == statusStr)
-        .map((e) => XUri(Uri.parse(e.key)))
-        .toList();
-  }
+  Future<List<XUri>> getByStatus(SyncStatus status) => _serialized(() async {
+        final data = await _load();
+        final statusStr = _statusToString(status);
+        return data.entries
+            .where((e) => e.value == statusStr)
+            .map((e) => XUri(Uri.parse(e.key)))
+            .toList();
+      });
 
   @override
-  Future<int> countByStatus(SyncStatus status) async {
-    final data = await _load();
-    final statusStr = _statusToString(status);
-    return data.values.where((v) => v == statusStr).length;
-  }
+  Future<int> countByStatus(SyncStatus status) => _serialized(() async {
+        final data = await _load();
+        final statusStr = _statusToString(status);
+        return data.values.where((v) => v == statusStr).length;
+      });
 
   @override
-  Future<List<XUri>> getAll() async {
-    final data = await _load();
-    return data.keys.map((k) => XUri(Uri.parse(k))).toList();
-  }
+  Future<List<XUri>> getAll() => _serialized(() async {
+        final data = await _load();
+        return data.keys.map((k) => XUri(Uri.parse(k))).toList();
+      });
 }
